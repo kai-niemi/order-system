@@ -1,0 +1,18 @@
+.idea/
+.log/
+target/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+.DS_Store?
+Thumbs.db
+*.log
+*.tmp
+*.history
+/order.json
+/order-form.json
+/modified-order.json
+.docs-build/
+ site/
+ .venv/

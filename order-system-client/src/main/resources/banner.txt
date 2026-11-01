@@ -1,0 +1,2 @@
+${AnsiColor.BRIGHT_MAGENTA}${application.title}${application.formatted-version} powered by Spring Boot${spring-boot.formatted-version}
+${AnsiColor.BRIGHT_GREEN}      API Root URL: ${AnsiColor.BRIGHT_YELLOW}${app.api.root-uri}${AnsiColor.DEFAULT}

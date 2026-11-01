@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: order-system-client
+  main:
+    web-application-type: none
+  jackson:
+    deserialization:
+      # Keep the scale of monetary amounts, 150.00 rather than 150.0
+      use-big-decimal-for-floats: true
+  #############################
+  shell:
+    command:
+      stacktrace:
+        enabled: true
+      version:
+        enabled: true
+        showBuildName: true
+        showGitBranch: true
+    script:
+      enabled: true
+    interactive:
+      enabled: true
+    noninteractive:
+      enabled: false
+    history:
+      name: .log/order-system-client.history
+#############################
+logging:
+  level:
+    root: WARN
+#############################
+app:
+  api:
+    # The only URI the client knows, everything else is discovered by following links
+    root-uri: http://localhost:8090/

@@ -1,0 +1,100 @@
+Databases Unleashed - First Edition
+The Art of Distributed Systems
+Mastering Modern Java
+PostgreSQL Internals Explained
+Building Reliable Microservices
+The Pragmatic Database Engineer
+Designing Scalable Systems
+Advanced SQL Query Optimization
+Spring Boot in Practice
+The Complete Guide to REST APIs
+Understanding Distributed Transactions
+High-Performance Java Applications
+Database Architecture Patterns
+Cloud-Native Systems Engineering
+Event-Driven Architecture in Action
+Concurrency and Parallelism in Java
+Domain-Driven Design for Practitioners
+The Kubernetes Survival Guide
+Modern API Security
+Data Modeling for Enterprise Applications
+The Software Engineer's Handbook
+Observability in Distributed Systems
+Reliable Messaging with Apache Kafka
+Principles of Cloud Computing
+The Art of Technical Leadership
+Designing Fault-Tolerant Applications
+Inside the Java Virtual Machine
+Practical Database Performance Tuning
+The Developer's Guide to CockroachDB
+Building Resilient Backend Services
+Microservices Without the Hype
+The Architecture of Everything
+Beyond CRUD - Designing Better APIs
+Transactions, Locks, and Isolation
+The Hidden Complexity of Simple Systems
+Scaling PostgreSQL for the Enterprise
+Java Virtual Threads in Action
+Understanding Database Indexes
+The Science of Software Reliability
+Modern Software Architecture
+Designing Systems That Never Sleep
+The Distributed Database Handbook
+Patterns of Enterprise Integration
+The Complete Guide to Spring Framework
+Database Replication and Consistency
+Building Event-Driven Microservices
+The Art of API Design
+From Monolith to Microservices
+Reliable Systems at Scale
+The Engineer's Guide to Kubernetes
+Mastering Java Performance
+Understanding Consensus Algorithms
+Data Structures for Modern Applications
+The Practical Guide to System Design
+Building Cloud-Native Java Applications
+Database Transactions Demystified
+Software Engineering Beyond the Code
+Designing for High Availability
+The Modern Backend Developer
+The Fundamentals of Distributed Computing
+The Art of Database Migration
+Mastering Spring Data JPA
+Building Reactive Applications
+Inside Modern Database Engines
+The Complete Guide to Apache Kafka
+API Design Beyond CRUD
+Distributed SQL in Practice
+The Software Architect's Playbook
+Practical Domain Modeling
+Building Systems for Global Scale
+The Hidden World of Database Locks
+Advanced Java Concurrency
+Understanding Eventual Consistency
+The Complete Guide to HTTP
+Designing Transactional Systems
+Modern Patterns for Data Integration
+The Engineer's Guide to REST
+Database Schema Evolution
+Building Secure Web Applications
+The Fundamentals of System Reliability
+Practical Performance Engineering
+The Art of Writing Maintainable Code
+Designing Multi-Region Applications
+The Complete Guide to SQL Transactions
+Java Memory Management Explained
+Building Financial Ledger Systems
+Modern Enterprise Integration Patterns
+The Architecture of Distributed Data
+Understanding CAP and Consensus
+The Developer's Guide to Spring Security
+Practical Test-Driven Development
+Building Reliable Payment Systems
+The Art of Debugging Distributed Systems
+Designing APIs for Long-Term Evolution
+The Complete Guide to Database Indexing
+High-Availability Architecture Patterns
+Understanding Message Delivery Semantics
+The Pragmatic Systems Architect
+Building Applications That Scale
+The Future of Distributed Databases

@@ -1,0 +1,60 @@
+name: Publish documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "order-system-server/src/main/resources/rels/**"
+      - "order-system-server/src/main/resources/problems/**"
+      - "order-system-server/src/main/resources/guides/**"
+      - "prepare-docs.sh"
+      - "zensical.toml"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install documentation dependencies
+        run: pip install -r requirements-docs.txt
+
+      - name: Prepare documentation
+        run: bash prepare-docs.sh
+
+      - name: Build documentation
+        run: zensical build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

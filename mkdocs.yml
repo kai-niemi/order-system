@@ -1,0 +1,41 @@
+site_name: Order System REST API
+site_url: https://order-system.cloudneutral.se/
+
+repo_url: https://github.com/kai-niemi/order-system
+repo_name: kai-niemi/order-system
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+docs_dir: .docs-build
+
+nav:
+  - Overview: index.md
+  - Guides:
+      - Introduction: guides/index.md
+      - Create Order: guides/create-order.md
+      - Cancel Order: guides/cancel-order.md
+  - Link Relations:
+      - Orders: rels/orders.md
+      - Order: rels/order.md
+      - Order Form: rels/orders-form.md
+      - Order Items: rels/orderItems.md
+      - Items: rels/items.md
+      - Products: rels/products.md
+      - Product: rels/product.md
+      - Customers: rels/customers.md
+      - Customer: rels/customer.md
+      - Cancel: rels/cancel.md
+      - Actuators: rels/actuators.md
+  - Problems:
+      - Idempotency Key Required: problems/idempotency-key-required.md
+      - Idempotency Key Reused: problems/idempotency-key-reused.md
+      - Idempotency Record Lost: problems/idempotency-record-lost.md
+      - Unknown Reference: problems/unknown-reference.md
+      - Order Rejected: problems/order-rejected.md
+      - Order Not Cancellable: problems/order-not-cancellable.md
