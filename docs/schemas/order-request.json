@@ -1,6 +1,6 @@
 {
   "$schema" : "https://json-schema.org/draft/2020-12/schema",
-  "$id" : "https://order-system.cloudneutral.se/profiles/order-request",
+  "$id" : "https://order-system.cloudneutral.se/schemas/order-request.json",
   "title" : "order-request",
   "type" : "object",
   "properties" : {

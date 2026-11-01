@@ -44,7 +44,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class ProfileController {
     public static final String SCHEMA_JSON_VALUE = "application/schema+json";
 
-    public static final String PROFILE_URI_TEMPLATE = "https://order-system.cloudneutral.se/profiles/{profile}";
+    public static final String PROFILE_URI_TEMPLATE = "https://order-system.cloudneutral.se/schemas/{profile}.json";
 
     public static final String ORDER = "order";
 

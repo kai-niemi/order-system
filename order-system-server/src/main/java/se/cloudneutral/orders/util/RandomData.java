@@ -106,7 +106,7 @@ public class RandomData {
         return (firstName.toLowerCase()
                 + "."
                 + lastName.toLowerCase()
-                + "_" + ThreadLocalRandom.current().nextInt(0,2^16)
+                + "_" + ThreadLocalRandom.current().nextInt()
                 + "@home.com")
                 .replace(' ', '.');
     }
