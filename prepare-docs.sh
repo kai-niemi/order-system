@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
+set -euo pipefail
 
 SOURCE="order-system-server/src/main/resources"
 TARGET=".docs-build"
