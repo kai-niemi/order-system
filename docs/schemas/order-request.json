@@ -1,0 +1,37 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$id" : "https://order-system.cloudneutral.se/profiles/order-request",
+  "title" : "order-request",
+  "type" : "object",
+  "properties" : {
+    "customerId" : {
+      "type" : "string",
+      "format" : "uuid",
+      "description" : "Identifier of the customer placing the order."
+    },
+    "items" : {
+      "description" : "The product lines of the order, at least one.",
+      "minItems" : 1,
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Identifier of the product to order."
+          },
+          "quantity" : {
+            "type" : "integer",
+            "description" : "Number of units to order, at least one.",
+            "exclusiveMinimum" : 0
+          }
+        },
+        "required" : [ "productId", "quantity" ],
+        "description" : "A product line of an order request."
+      }
+    }
+  },
+  "required" : [ "customerId", "items" ],
+  "description" : "A request to place an order. It carries no prices: the price of each line is the current product price when the order is placed."
+}

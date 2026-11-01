@@ -4,8 +4,22 @@ site_url: https://order-system.cloudneutral.se/
 repo_url: https://github.com/kai-niemi/order-system
 repo_name: kai-niemi/order-system
 
+#extra:
+#  generator: false
+
 theme:
   name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.top
@@ -39,3 +53,4 @@ nav:
       - Unknown Reference: problems/unknown-reference.md
       - Order Rejected: problems/order-rejected.md
       - Order Not Cancellable: problems/order-not-cancellable.md
+  - Profiles: profiles.md

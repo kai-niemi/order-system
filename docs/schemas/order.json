@@ -1,0 +1,62 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$id" : "https://order-system.cloudneutral.se/profiles/order",
+  "title" : "order",
+  "type" : "object",
+  "properties" : {
+    "customerEmail" : {
+      "type" : "string",
+      "description" : "Email address of the customer who placed the order, for display."
+    },
+    "customerName" : {
+      "type" : "string",
+      "description" : "Full name of the customer who placed the order, for display. Follow the customer link for the customer itself."
+    },
+    "datePlaced" : {
+      "type" : "string",
+      "format" : "date-time",
+      "description" : "When the order was placed, as an instant in UTC."
+    },
+    "dateUpdated" : {
+      "type" : "string",
+      "format" : "date-time",
+      "description" : "When the order last changed, as an instant in UTC."
+    },
+    "deliveryAddress" : {
+      "type" : "object",
+      "properties" : {
+        "address1" : {
+          "type" : "string",
+          "description" : "First line of the street address."
+        },
+        "address2" : {
+          "type" : "string",
+          "description" : "Second line of the street address, if any."
+        },
+        "city" : {
+          "type" : "string",
+          "description" : "City."
+        },
+        "country" : {
+          "type" : "string",
+          "description" : "Country."
+        },
+        "postcode" : {
+          "type" : "string",
+          "description" : "Postal code."
+        }
+      },
+      "description" : "Where the order is to be delivered."
+    },
+    "status" : {
+      "type" : "string",
+      "enum" : [ "placed", "confirmed", "cancelled", "delivered" ],
+      "description" : "Where the order is in its lifecycle. The transitions available in the current state are advertised on the order as links and HAL-FORMS templates."
+    },
+    "totalPrice" : {
+      "type" : "number",
+      "description" : "Sum of the cost of all line items, in the currency of the product prices."
+    }
+  },
+  "description" : "A purchase order. It has no identifier property: the target of its self link is its identity."
+}

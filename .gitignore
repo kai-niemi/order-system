@@ -14,5 +14,5 @@ Thumbs.db
 /order-form.json
 /modified-order.json
 .docs-build/
- site/
- .venv/
+.venv/
+/site/

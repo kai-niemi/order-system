@@ -1,0 +1,31 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$id" : "https://order-system.cloudneutral.se/profiles/product",
+  "title" : "product",
+  "type" : "object",
+  "properties" : {
+    "id" : {
+      "type" : "string",
+      "format" : "uuid",
+      "description" : "Identifier of the product, used to refer to it in an order request."
+    },
+    "inventory" : {
+      "type" : "integer",
+      "description" : "Units in stock. An order for more than this is rejected."
+    },
+    "name" : {
+      "type" : "string",
+      "description" : "Name of the product."
+    },
+    "price" : {
+      "type" : "number",
+      "description" : "Current price of one unit. An order records the price at the time it is placed."
+    },
+    "sku" : {
+      "type" : "string",
+      "description" : "Stock keeping unit of the product."
+    }
+  },
+  "required" : [ "inventory" ],
+  "description" : "A product that can be ordered, as it is now."
+}

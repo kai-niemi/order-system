@@ -1,0 +1,35 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$id" : "https://order-system.cloudneutral.se/profiles/order-item",
+  "title" : "order-item",
+  "type" : "object",
+  "properties" : {
+    "productId" : {
+      "type" : "string",
+      "format" : "uuid",
+      "description" : "Identifier of the ordered product. Follow the product link to reach the product rather than building its address."
+    },
+    "productName" : {
+      "type" : "string",
+      "description" : "Name of the ordered product."
+    },
+    "productSku" : {
+      "type" : "string",
+      "description" : "Stock keeping unit of the ordered product."
+    },
+    "quantity" : {
+      "type" : "integer",
+      "description" : "Number of units ordered."
+    },
+    "totalCost" : {
+      "type" : "number",
+      "description" : "Quantity times unit price."
+    },
+    "unitPrice" : {
+      "type" : "number",
+      "description" : "Price of one unit, recorded when the order was placed."
+    }
+  },
+  "required" : [ "quantity" ],
+  "description" : "A line of an order: one product, how many, and the price recorded when the order was placed."
+}

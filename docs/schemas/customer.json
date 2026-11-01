@@ -1,0 +1,52 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "$id" : "https://order-system.cloudneutral.se/profiles/customer",
+  "title" : "customer",
+  "type" : "object",
+  "properties" : {
+    "address" : {
+      "type" : "object",
+      "properties" : {
+        "address1" : {
+          "type" : "string",
+          "description" : "First line of the street address."
+        },
+        "address2" : {
+          "type" : "string",
+          "description" : "Second line of the street address, if any."
+        },
+        "city" : {
+          "type" : "string",
+          "description" : "City."
+        },
+        "country" : {
+          "type" : "string",
+          "description" : "Country."
+        },
+        "postcode" : {
+          "type" : "string",
+          "description" : "Postal code."
+        }
+      },
+      "description" : "Address of the customer."
+    },
+    "email" : {
+      "type" : "string",
+      "description" : "Email address of the customer."
+    },
+    "firstName" : {
+      "type" : "string",
+      "description" : "First name of the customer."
+    },
+    "id" : {
+      "type" : "string",
+      "format" : "uuid",
+      "description" : "Identifier of the customer, used to refer to them in an order request."
+    },
+    "lastName" : {
+      "type" : "string",
+      "description" : "Last name of the customer."
+    }
+  },
+  "description" : "A customer who can place orders."
+}
