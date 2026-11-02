@@ -517,12 +517,22 @@ The implementation uses the following rules:
   Canonicalization sorts object keys, treats absent and null values equivalently, and normalizes numeric values.
 - **Atomicity:** The order identifier is generated before the idempotency key is claimed. The identifier and fingerprint
   are stored together when the key is claimed. The idempotency claim and order creation participate in the same database
-  transaction and commit or roll back together.
+  transaction and commit or roll back together. If the initial operation fails before committing, its idempotency claim
+  is rolled back and the key becomes available again. A request rejected because its fingerprint differs from an
+  existing committed record does not modify that record.
+- **Concurrency:** A request whose key is claimed by another request still in progress waits for that request to finish.
+  If the other request commits, the waiting request replays its order, or is rejected with `422` if its body differs.
+  If the other request rolls back, the waiting request claims the key and places the order itself. In either case, at
+  most one order is committed for a given key within its scope and retention window.
+- **Isolation:** This holds under both `READ COMMITTED` and `SERIALIZABLE` isolation. Under SERIALIZABLE, a competing
+  request may encounter a serialization failure (SQLSTATE 40001) when the other transaction commits. The server retries
+  the entire transaction transparently, allowing the retry to observe the committed idempotency record and replay the
+  existing order.
 - **Retention:** Records remain eligible for replay until their configured expiration. Once expired, a key can be reused
   for a new request.
-- **Cleanup:** Expired records are removed by the scheduled `IdempotencyEvictor`. Cleanup uses short SQL transactions
-  with `FOR UPDATE SKIP LOCKED`, allowing multiple application instances to perform cleanup without processing the same
-  locked rows.
+- **Cleanup:** Expired records are removed by the scheduled `IdempotencyEvictor`, in batches that each run in a short SQL
+  transaction of their own. Batches use FOR UPDATE SKIP LOCKED to avoid waiting on rows locked by concurrent requests or
+  other cleanup workers.
 
 Cleanup behavior is configurable through:
 

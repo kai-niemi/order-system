@@ -7,7 +7,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import se.cloudneutral.orders.annotation.TransactionBoundary;
 import se.cloudneutral.orders.config.IdempotencyProperties;
 import se.cloudneutral.orders.repository.IdempotencyRepository;
 
@@ -17,7 +16,9 @@ import se.cloudneutral.orders.repository.IdempotencyRepository;
  * eviction only reclaims space and its lag does not affect the replay window.
  * <p>
  * Safe to run on every instance: each batch is its own short transaction that locks rows with
- * {@code skip locked}, so instances take disjoint batches and no leader election is needed.
+ * {@code skip locked}, so instances take disjoint batches and no leader election is needed. The
+ * run itself is deliberately not transactional, so each batch commits as it completes and no
+ * locks are held across batches.
  */
 @Component
 public class IdempotencyEvictor {
@@ -30,7 +31,6 @@ public class IdempotencyEvictor {
     private IdempotencyProperties properties;
 
     @Scheduled(fixedDelayString = "${app.idempotency.evict-interval:PT10M}")
-    @TransactionBoundary
     public void evictExpired() {
         int batchSize = properties.evictBatch();
         long total = 0;
@@ -47,7 +47,7 @@ public class IdempotencyEvictor {
                 logger.info("Evicted {} expired idempotency records", total);
             }
         } catch (DataAccessException e) {
-            // Retried on the next run, nothing is lost by a failed batch
+            // Earlier batches are committed, the rest is retried on the next run
             logger.warn("Idempotency eviction failed after deleting {} records", total, e);
         }
     }

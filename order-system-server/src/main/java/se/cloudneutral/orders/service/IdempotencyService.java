@@ -8,9 +8,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import se.cloudneutral.orders.annotation.TransactionBoundary;
+import se.cloudneutral.orders.aspect.ExceptionClassifier;
 import se.cloudneutral.orders.config.IdempotencyProperties;
 import se.cloudneutral.orders.domain.IdempotencyRecord;
 import se.cloudneutral.orders.repository.IdempotencyRepository;
@@ -26,15 +28,33 @@ public class IdempotencyService {
 
     /**
      * Executes an operation at most once per (scope, key) within the retention period.
+     *
      * <p>
-     * The id of the resource to create is minted up front and written to the idempotency record
-     * in the same statement that claims the key, so a record never exists without a resource.
-     * The record and the resource commit or roll back together.
+     * The resource identifier is generated before key acquisition and stored in the
+     * idempotency record. Key acquisition and resource creation execute within the
+     * same database transaction, ensuring that neither can commit independently.
+     *
+     * <p>
+     * Supports both READ COMMITTED and SERIALIZABLE isolation. Concurrent requests
+     * using the same key are coordinated through the database's unique constraint.
+     * Under READ COMMITTED, a waiting request can observe the committed record and
+     * replay the existing resource, or acquire the key if the competing transaction
+     * rolls back.
+     *
+     * <p>
+     * Under SERIALIZABLE, a competing request may encounter a serialization failure
+     * if the conflicting record was committed after its transaction snapshot was
+     * established. The retry interceptor retries the entire transaction using a new
+     * snapshot. The retry must execute outside the transaction boundary; see
+     * AdvisorOrder.
      *
      * @param request        identifies the request and carries the payload to fingerprint
-     * @param operation      creates the resource using the supplied, pre-generated id
-     * @param representation builds the response from a resource id
+     * @param operation      creates the resource using the supplied, pre-generated ID
+     * @param representation builds the response from a resource ID
      */
+    // Important: Retry advice must wrap transaction advice so each attempt start a new transaction. See AdvisorOrder.
+    @Retryable(predicate = ExceptionClassifier.class,
+            maxRetries = 5, delay = 25, multiplier = 2, maxDelay = 500, jitter = 10)
     @TransactionBoundary
     public <T> IdempotencyResult<T> execute(
             IdempotencyRequest request,
@@ -58,12 +78,12 @@ public class IdempotencyService {
             return new IdempotencyResult<>(representation.apply(resourceId), false);
         }
 
-        // A live record exists, so replay or reject. Absence here is not expected: the
-        // conflicting row was just observed within this same serializable transaction. It is
-        // kept as a safety net for a real anomaly rather than as a client-facing scenario.
+        // An unsuccessful acquisition implies an existing, unexpired record.
+        // ON CONFLICT DO UPDATE locks the conflicting row until transaction end,
+        // even when its WHERE condition is false. Concurrent deletion is therefore
+        // prevented until the lookup completes.
         IdempotencyRecord existing = repository.findByKey(request.scope(), request.key())
-                .orElseThrow(() -> new IdempotencyException(
-                        IdempotencyException.Reason.RECORD_LOST,
+                .orElseThrow(() -> new IllegalStateException(
                         "Idempotency record lost for key: " + request.key()));
 
         if (!MessageDigest.isEqual(existing.fingerprint(), fingerprint)) {

@@ -49,7 +49,7 @@ public class OrderPlacementTest extends AbstractIntegrationTest {
     @BeforeAll
     public void beforeAll() {
         String isolation = MetadataUtils.databaseIsolation(dataSource);
-        assertThat(isolation.toUpperCase()).isEqualTo("SERIALIZABLE");
+        assertThat(isolation.toUpperCase()).isEqualTo("READ COMMITTED");
 
         dataService.deleteAllData();
         dataService.createCustomers(100, TestDataGenerator::randomCustomer);

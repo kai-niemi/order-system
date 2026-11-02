@@ -15,11 +15,12 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import se.cloudneutral.orders.annotation.TransactionBoundary;
 import se.cloudneutral.orders.domain.IdempotencyRecord;
 
 /**
- * Idempotency records keyed by (scope, idempotency_key). Written in portable SQL that runs on
- * PostgreSQL, which is the reference database.
+ * Idempotency records keyed by (scope, idempotency_key), for PostgreSQL, which is the reference
+ * database. The claim relies on {@code insert .. on conflict}, which is PostgreSQL syntax.
  */
 @Repository
 public class IdempotencyRepository {
@@ -95,11 +96,14 @@ public class IdempotencyRepository {
     /**
      * Deletes at most {@code batchSize} expired records in a transaction of their own. Rows are
      * locked with {@code skip locked}, so concurrent evictors on other instances take disjoint
-     * batches without any coordination and never block on rows held by live requests. Runs at
-     * read committed since it has no need for serializable semantics.
+     * batches without any coordination and never block on rows held by live requests, including
+     * a record that a request is recycling or has just found. Runs at the configured isolation.
+     * At serializable a batch can fail with a serialization failure if a request recycles one of
+     * its rows concurrently; nothing is lost, the batch is rolled back and the next run repeats it.
      *
      * @return the number of records deleted
      */
+    @TransactionBoundary
     public int deleteExpired(int batchSize) {
         return jdbcTemplate.update("""
                         delete from idempotency_record

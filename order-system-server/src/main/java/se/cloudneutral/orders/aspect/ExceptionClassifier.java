@@ -31,23 +31,17 @@ public class ExceptionClassifier implements MethodRetryPredicate {
             return false;
         }
 
-        boolean transientError = false;
-
         Throwable throwable = NestedExceptionUtils.getMostSpecificCause(ex);
-        if (throwable instanceof SQLException sqlException) {
-            if (SERIALIZATION_FAILURE.equals(sqlException.getSQLState())) {
-                transientError = true;
-            }
-
-            if (transientError) {
-                logger.warn("Transient SQL exception detected : sql state [{}], message [{}]",
-                        sqlException.getSQLState(), ex.toString());
-            }
-
+        if (throwable instanceof SQLException sqlException
+            && SERIALIZATION_FAILURE.equals(sqlException.getSQLState())) {
+            logger.warn("Transient SQL exception in {}, retrying: sql state [{}], message [{}]",
+                    method.getName(), sqlException.getSQLState(), sqlException.getMessage());
+            return true;
         }
 
-        logger.warn("Non-transient exception {}", ex.getClass());
-        return transientError;
+        // Business exceptions pass through here too, so this is not worth more than debug
+        logger.debug("Non-transient exception in {}, not retrying: {}", method.getName(), ex.getClass());
+        return false;
     }
 }
 

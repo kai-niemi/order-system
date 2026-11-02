@@ -40,7 +40,7 @@ spring:
       # Controls the keepalive interval for a connection in the pool.
       keepalive-time: 0
       # Default isolation
-      transaction-isolation: TRANSACTION_SERIALIZABLE
+      transaction-isolation: TRANSACTION_READ_COMMITTED
       # Extra driver properties
       data-source-properties:
         reWriteBatchedInserts: true

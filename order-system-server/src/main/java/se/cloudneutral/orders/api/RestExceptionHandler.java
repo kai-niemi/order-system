@@ -30,7 +30,8 @@ import se.cloudneutral.orders.service.OrderService;
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ProblemDetail handle(Exception ex) {
-        // Nothing about the failure is exposed to the client
+        // Nothing about the failure is exposed to the client, so it must at least be logged
+        logger.error("Unhandled exception, responding with 500", ex);
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
