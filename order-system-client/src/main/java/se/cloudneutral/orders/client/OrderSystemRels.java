@@ -12,10 +12,14 @@ public abstract class OrderSystemRels {
 
     public static final String PRODUCTS = of("products");
 
+    public static final String CUSTOMERS = of("customers");
+
     public static final String ORDERS_FORM = of("orders-form");
 
     // On the order form, the affordance for submitting it. On anything else, a single order.
     public static final String ORDER = of("order");
+
+    public static final String ORDER_COLL_REL = of("orders");
 
     public static final String ITEMS = of("items");
 

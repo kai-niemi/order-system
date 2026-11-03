@@ -10,18 +10,12 @@ spring:
   #############################
   shell:
     command:
-      stacktrace:
-        enabled: true
       version:
         enabled: true
         showBuildName: true
         showGitBranch: true
-    script:
-      enabled: true
     interactive:
       enabled: true
-    noninteractive:
-      enabled: false
     history:
       name: .log/order-system-client.history
 #############################

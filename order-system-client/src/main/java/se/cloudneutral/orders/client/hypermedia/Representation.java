@@ -81,7 +81,6 @@ public final class Representation {
      */
     public JsonNode properties() {
         ObjectNode state = (ObjectNode) body.deepCopy();
-//        state.remove(List.of("_links", "_embedded", "_templates"));
         state.remove(List.of("_links", "_templates"));
         return state;
     }

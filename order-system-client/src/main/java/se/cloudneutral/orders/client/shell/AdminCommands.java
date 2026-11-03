@@ -32,8 +32,8 @@ public class AdminCommands {
     }
 
     @Command(value = "Show system information",
-            name = {"show", "system-info"},
-            alias = {"ssi"})
+            name = {"system-info"},
+            alias = {"si"})
     public void systemInfo(CommandContext ctx) {
         OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
 

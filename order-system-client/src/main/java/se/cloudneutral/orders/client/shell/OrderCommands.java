@@ -1,6 +1,8 @@
 package se.cloudneutral.orders.client.shell;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,13 +39,10 @@ public class OrderCommands {
 
     @Command(name = {"order", "cancel"},
             alias = "ox",
-            group = "Order Commands",
+            group = "3. Order Commands",
             description = "Cancel an order through its 'cancel' HAL-FORMS affordance, offered only while it can be cancelled")
-    public String cancelOrder(
-            @Argument(index = 0,
-                    description = "URI of the order, as printed by 'order create'. "
-                                  + "Defaults to the last order placed in this session")
-            String orderUri) {
+    public String cancelOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order create'. "
+                                  + "Defaults to the last order placed in this session") String orderUri) {
         URI uri;
         if (StringUtils.hasText(orderUri)) {
             uri = URI.create(orderUri);
@@ -82,7 +81,7 @@ public class OrderCommands {
 
     @Command(name = {"order", "create"},
             alias = "oc",
-            group = "Order Commands",
+            group = "3. Order Commands",
             description = "Place an order by filling in the order form and submitting its HAL-FORMS affordance")
     public String createOrder(
             @Option(longName = "products", shortName = 'p', defaultValue = "1",
@@ -132,4 +131,39 @@ public class OrderCommands {
                 "",
                 table.render());
     }
+
+    @Command(name = {"order", "list"},
+            group = "3. Order Commands",
+            alias = "ol",
+            description = "List orders, discovered from the API root and paged by following 'next' links")
+    public String listOrders(
+            @Option(longName = "limit", shortName = 'l', defaultValue = "10",
+                    description = "Maximum number of orders to list") int limit) {
+        Representation firstPage = client.follow(client.root(), OrderSystemRels.ORDER_COLL_REL);
+
+        List<Representation> orders = new ArrayList<>();
+        Optional<Representation> page = Optional.of(firstPage);
+        while (page.isPresent() && orders.size() < limit) {
+            page.get().embedded(OrderSystemRels.ORDER_COLL_REL).stream()
+                    .limit(limit - orders.size())
+                    .forEach(orders::add);
+            page = client.followIfPresent(page.get(), OrderSystemRels.NEXT);
+        }
+
+        Table table = new Table("Status", "Total Price", "Date Placed", "Date Updated",
+                "Customer Name", "Customer Email");
+        orders.forEach(product -> table.addRow(
+                product.get("status").asString(),
+                product.get("totalPrice").asString(),
+                product.get("datePlaced").asString(),
+                product.get("dateUpdated").asString(),
+                product.get("customerName").asString(),
+                product.get("customerEmail").asString()
+        ));
+
+        return table.render()
+               + "%n%d of %d orders".formatted(orders.size(),
+                firstPage.get("page").path("totalElements").asLong(orders.size()));
+    }
+
 }
