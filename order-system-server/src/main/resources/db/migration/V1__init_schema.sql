@@ -30,6 +30,7 @@ create type shipment_status as enum
     'PLACED',
     'CONFIRMED',
     'PAYMENT_PENDING',
+    'PAYMENT_BLOCKED',
     'PAID',
     'CANCELLED',
     'DELIVERED'
@@ -73,8 +74,8 @@ create type payment_status as enum
     (
         'PENDING',
         'SUCCEEDED',
-        'FAILED',
-        'DECLINED'
+        'DECLINED',
+        'UNRESOLVED'
     );
 
 create cast (varchar as payment_status) with inout as implicit;
@@ -87,6 +88,10 @@ create table payment_attempt
     status             payment_status not null default 'PENDING',
     provider_reference varchar(255),
     lease_until        timestamptz,
+    -- Times a worker took the attempt under a lease, whether or not it went on to call the provider
+    claim_count        integer        not null default 0,
+    -- Times the provider was (about to be) called. Recorded before the call, so a crash in
+    -- between over-counts rather than under-counts. The retry limit applies to this count.
     attempt_count      integer        not null default 0,
     simulate_timeout   bool           not null default false,
 

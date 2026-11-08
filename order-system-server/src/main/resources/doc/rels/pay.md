@@ -2,29 +2,32 @@
 
 ## Semantics
 
-Identifies the transition that starts payment of an [order](order). It moves the order from the
-`placed` state to `payment_pending` and creates a payment attempt for the total price of the
-order.
+Identifies the transition that starts payment of an [order](order). It moves the order from `placed` to
+`payment_pending` and creates a payment attempt for the order's total price.
 
-The link is present on an order only while the order can be paid, which is while it is `placed`.
-Its absence means the transition is not available, so a client should not attempt it and does not
-need to know the rule behind it. The rule is the server's, and may change.
+The `pay` affordance is present on an order only while payment can be initiated, which is currently while the order is
+`placed`. Its absence means the transition is unavailable. Clients should follow the advertised affordance rather than
+reproduce the server's eligibility rules, which may change.
 
-Payment is asynchronous. The request is only accepted: the response is `202 Accepted`, with the
-payment attempt as its body and its URI in the `Location` header. The attempt starts out
-`pending` and is settled later by the server, so a client follows the `self` link of the attempt
-to learn the outcome. The attempt links back to its order with the [order](order) relation.
+Payment is asynchronous. The server responds with `202 Accepted`, returning the payment attempt representation in the
+response body and its URI in the `Location` header. The attempt initially has status `pending`. Clients can follow its
+`self` link to check the outcome. The attempt links back to its order using the [order](order) relation.
 
 A payment attempt has one of these statuses:
 
-- `pending` — accepted, not yet settled.
-- `succeeded` — the payment went through. The order becomes `paid`.
-- `declined` — the payment was refused. The order returns to `placed`.
-- `failed` — the server gave up on the attempt after repeated tries without a result. The order
-  returns to `placed`.
+- `pending`: Accepted and awaiting a definitive outcome.
+- `succeeded`: Payment succeeded. The order becomes `paid`.
+- `declined`: Payment was refused. The order returns to `placed`.
+- `unresolved`: Automatic processing stopped without establishing whether the customer was charged. The order becomes
+  `payment_blocked` to prevent another payment attempt. The attempt remains unresolved until the server reconciles it
+  with the provider, after which it becomes `succeeded` or `declined` and the order transitions accordingly.
 
-Only one payment can be pending for an order at a time. After a `declined` or `failed` attempt
-the order offers this transition again, and paying starts a new attempt.
+While the order is `payment_blocked`, the client must not initiate another payment. It can follow the payment attempt
+and order links to check for a reconciled outcome.
+
+Only one payment attempt can be pending for an order at a time. After a declined attempt, the order advertises `pay`
+again, and initiating payment creates a new attempt. The affordance is not available while the order is
+`payment_pending` or `payment_blocked`.
 
 ## Affordances
 

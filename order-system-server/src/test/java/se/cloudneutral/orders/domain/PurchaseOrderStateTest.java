@@ -79,6 +79,63 @@ class PurchaseOrderStateTest {
     }
 
     @Test
+    void givenPaymentPending_whenPaymentBlocked_thenExpectPaymentBlocked() {
+        PurchaseOrder order = order(ShipmentStatus.PAYMENT_PENDING);
+
+        order.paymentBlocked();
+
+        assertThat(order.getStatus()).isEqualTo(ShipmentStatus.PAYMENT_BLOCKED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ShipmentStatus.class, names = "PAYMENT_PENDING", mode = EnumSource.Mode.EXCLUDE)
+    void givenOtherState_whenPaymentBlocked_thenExpectInvalidTransition(ShipmentStatus status) {
+        PurchaseOrder order = order(status);
+
+        assertThatThrownBy(order::paymentBlocked).isInstanceOf(InvalidStateTransitionException.class);
+        assertThat(order.getStatus()).isEqualTo(status);
+    }
+
+    @Test
+    void givenPaymentBlocked_whenReconciledAsPaid_thenExpectPaid() {
+        PurchaseOrder order = order(ShipmentStatus.PAYMENT_BLOCKED);
+
+        order.reconciledAsPaid();
+
+        assertThat(order.getStatus()).isEqualTo(ShipmentStatus.PAID);
+    }
+
+    @Test
+    void givenPaymentBlocked_whenReconciledAsDeclined_thenExpectPlaced() {
+        PurchaseOrder order = order(ShipmentStatus.PAYMENT_BLOCKED);
+
+        order.reconciledAsDeclined();
+
+        assertThat(order.getStatus()).isEqualTo(ShipmentStatus.PLACED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ShipmentStatus.class, names = "PAYMENT_BLOCKED", mode = EnumSource.Mode.EXCLUDE)
+    void givenOtherState_whenReconciled_thenExpectInvalidTransition(ShipmentStatus status) {
+        PurchaseOrder order = order(status);
+
+        assertThatThrownBy(order::reconciledAsPaid).isInstanceOf(InvalidStateTransitionException.class);
+        assertThatThrownBy(order::reconciledAsDeclined).isInstanceOf(InvalidStateTransitionException.class);
+        assertThat(order.getStatus()).isEqualTo(status);
+    }
+
+    // A blocked payment has an unknown outcome, so the ordinary payment results must not apply
+    @Test
+    void givenPaymentBlocked_whenPaymentResultOrDeliver_thenExpectInvalidTransition() {
+        PurchaseOrder order = order(ShipmentStatus.PAYMENT_BLOCKED);
+
+        assertThatThrownBy(order::paymentSucceeded).isInstanceOf(InvalidStateTransitionException.class);
+        assertThatThrownBy(order::paymentDeclined).isInstanceOf(InvalidStateTransitionException.class);
+        assertThatThrownBy(order::deliver).isInstanceOf(InvalidStateTransitionException.class);
+        assertThat(order.getStatus()).isEqualTo(ShipmentStatus.PAYMENT_BLOCKED);
+    }
+
+    @Test
     void givenPaid_whenDeliver_thenExpectDelivered() {
         PurchaseOrder order = order(ShipmentStatus.PAID);
 

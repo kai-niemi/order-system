@@ -151,6 +151,40 @@ public class PurchaseOrder extends AbstractEntity<UUID> {
         status = ShipmentStatus.PLACED;
     }
 
+    /**
+     * The payment outcome is unknown. The order must not return to PLACED, since paying again
+     * could charge the customer twice. Only a definitive reconciliation result leaves this state.
+     */
+    public void paymentBlocked() {
+        if (status != ShipmentStatus.PAYMENT_PENDING) {
+            throw new InvalidStateTransitionException(
+                    "Order is not awaiting payment"
+            );
+        }
+
+        status = ShipmentStatus.PAYMENT_BLOCKED;
+    }
+
+    public void reconciledAsPaid() {
+        if (status != ShipmentStatus.PAYMENT_BLOCKED) {
+            throw new InvalidStateTransitionException(
+                    "Order payment is not blocked"
+            );
+        }
+
+        status = ShipmentStatus.PAID;
+    }
+
+    public void reconciledAsDeclined() {
+        if (status != ShipmentStatus.PAYMENT_BLOCKED) {
+            throw new InvalidStateTransitionException(
+                    "Order payment is not blocked"
+            );
+        }
+
+        status = ShipmentStatus.PLACED;
+    }
+
     public void deliver() {
         if (status != ShipmentStatus.PAID) {
             throw new InvalidStateTransitionException(
@@ -199,11 +233,6 @@ public class PurchaseOrder extends AbstractEntity<UUID> {
 
         public Builder withCustomer(Customer customer) {
             this.customer = customer;
-            return this;
-        }
-
-        public Builder andOrderItems(List<PurchaseOrderItem> items) {
-            this.orderItems.addAll(items);
             return this;
         }
 

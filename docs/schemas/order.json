@@ -50,7 +50,7 @@
     },
     "status" : {
       "type" : "string",
-      "enum" : [ "PLACED", "CONFIRMED", "PAYMENT_PENDING", "PAID", "CANCELLED", "DELIVERED" ],
+      "enum" : [ "PLACED", "CONFIRMED", "PAYMENT_PENDING", "PAYMENT_BLOCKED", "PAID", "CANCELLED", "DELIVERED" ],
       "description" : "Where the order is in its lifecycle. The transitions available in the current state are advertised on the order as links and HAL-FORMS templates."
     },
     "totalPrice" : {

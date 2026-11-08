@@ -11,8 +11,11 @@
 5. Poll the payment attempt through its `self` link until its status is no longer `pending`.
 6. Read the order again.
    - If the payment `succeeded`, the order is `paid` and has a [deliver](../rels/deliver) link.
-   - If the payment was `declined` or `failed`, the order is `placed` again with `pay` and
-     `cancel` links, and can be paid with a new key.
+   - If the payment was `declined`, the order is `placed` again with `pay` and `cancel` links,
+     and can be paid with a new key.
+   - If the payment is `unresolved`, the order is `payment_blocked` and offers no links. The
+     outcome is not known, so do not pay again with a new key. Keep reading the attempt and the
+     order: once the server has reconciled the payment, the order becomes `paid` or `placed`.
 7. To deliver a `paid` order, select the template that targets the `deliver` link and submit it
    without a body. The response is `204 No Content`, and the order is now `delivered`.
 

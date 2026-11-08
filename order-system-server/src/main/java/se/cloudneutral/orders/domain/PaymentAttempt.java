@@ -43,6 +43,9 @@ public class PaymentAttempt extends AbstractEntity<UUID> {
     @Column(name = "lease_until")
     private Instant leaseUntil;
 
+    @Column(name = "claim_count", nullable = false)
+    private int claimCount;
+
     @Column(name = "attempt_count", nullable = false)
     private int attemptCount;
 
@@ -82,6 +85,19 @@ public class PaymentAttempt extends AbstractEntity<UUID> {
         }
 
         leaseUntil = now.plus(leaseDuration);
+        claimCount++;
+    }
+
+    /**
+     * Records that the provider is about to be called. Only these calls count towards the retry
+     * limit: a worker may crash after claiming but before calling the provider, and a claim alone
+     * does not mean the outcome at the provider is in doubt.
+     */
+    public void startProcessing() {
+        if (status != PaymentStatus.PENDING) {
+            throw new IllegalStateException("Payment is not pending");
+        }
+
         attemptCount++;
     }
 
@@ -104,17 +120,42 @@ public class PaymentAttempt extends AbstractEntity<UUID> {
     }
 
     /**
-     * Gives up on an attempt that exhausted its processing attempts without a provider result.
+     * Parks an attempt that exhausted its processing attempts without a definitive provider result.
      */
-    public void fail() {
+    public void markUnresolved() {
         if (status != PaymentStatus.PENDING) {
             throw new IllegalStateException(
                     "Payment attempt already completed"
             );
         }
 
-        status = PaymentStatus.FAILED;
+        status = PaymentStatus.UNRESOLVED;
         leaseUntil = null;
+    }
+
+    /**
+     * Applies a definitive result obtained by reconciliation to an unresolved attempt.
+     */
+    public void reconcile(PaymentResult result) {
+        if (status != PaymentStatus.UNRESOLVED) {
+            throw new IllegalStateException(
+                    "Payment attempt is not unresolved"
+            );
+        }
+
+        switch (result.status()) {
+            case SUCCEEDED -> {
+                status = PaymentStatus.SUCCEEDED;
+                providerReference = result.providerReference();
+            }
+            case DECLINED -> status = PaymentStatus.DECLINED;
+            default -> throw new IllegalArgumentException(
+                    "Not a definitive result: " + result.status());
+        }
+    }
+
+    public int getClaimCount() {
+        return claimCount;
     }
 
     public int getAttemptCount() {

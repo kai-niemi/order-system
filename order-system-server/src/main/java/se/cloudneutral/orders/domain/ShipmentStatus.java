@@ -8,6 +8,7 @@ public enum ShipmentStatus {
     PLACED,
     CONFIRMED,
     PAYMENT_PENDING,
+    PAYMENT_BLOCKED,
     PAID,
     CANCELLED,
     DELIVERED;

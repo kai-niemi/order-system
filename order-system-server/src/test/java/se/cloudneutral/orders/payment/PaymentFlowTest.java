@@ -22,11 +22,13 @@ import se.cloudneutral.orders.api.ResourceNotFoundException;
 import se.cloudneutral.orders.domain.InvalidStateTransitionException;
 import se.cloudneutral.orders.domain.PaymentRequest;
 import se.cloudneutral.orders.domain.PaymentResult;
+import se.cloudneutral.orders.domain.PaymentStatus;
 import se.cloudneutral.orders.order.AbstractDatabaseTest;
-import se.cloudneutral.orders.service.DefaultPaymentService;
 import se.cloudneutral.orders.service.PaymentClaimService;
 import se.cloudneutral.orders.service.PaymentCompletionService;
+import se.cloudneutral.orders.service.PaymentCompletionScheduler;
 import se.cloudneutral.orders.service.PaymentProcessor;
+import se.cloudneutral.orders.service.PaymentReconciliationService;
 import se.cloudneutral.orders.service.PaymentService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,13 +51,16 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
     private PaymentService paymentService;
 
     @Autowired
-    private DefaultPaymentService defaultPaymentService;
+    private PaymentCompletionScheduler paymentDispatch;
 
     @Autowired
     private PaymentClaimService claimService;
 
     @Autowired
     private PaymentCompletionService completionService;
+
+    @Autowired
+    private PaymentReconciliationService reconciliationService;
 
     @MockitoBean
     private PaymentProcessor paymentProcessor;
@@ -80,6 +85,11 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
     private int attemptCount(UUID paymentId) {
         return jdbcTemplate.queryForObject(
                 "select attempt_count from payment_attempt where id = ?", Integer.class, paymentId);
+    }
+
+    private int claimCount(UUID paymentId) {
+        return jdbcTemplate.queryForObject(
+                "select claim_count from payment_attempt where id = ?", Integer.class, paymentId);
     }
 
     private long attemptRows(UUID orderId) {
@@ -251,16 +261,42 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
     }
 
     @Test
-    void givenCompletedPayment_whenCompleteAgain_thenExpectNoOpEvenWithOtherResult() {
+    void givenCompletedPayment_whenCompleteAgainWithSameResult_thenExpectNoOp() {
         UUID orderId = placeOrder();
         UUID paymentId = initiate(orderId);
         completionService.complete(paymentId, PaymentResult.succeeded("ref-1"));
 
         completionService.complete(paymentId, PaymentResult.succeeded("ref-1"));
-        completionService.complete(paymentId, PaymentResult.declined());
 
         assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
         assertThat(orderStatus(orderId)).isEqualTo("PAID");
+    }
+
+    @Test
+    void givenSucceededPayment_whenCompleteWithDeclined_thenExpectInvalidStateAndNoChange() {
+        UUID orderId = placeOrder();
+        UUID paymentId = initiate(orderId);
+        completionService.complete(paymentId, PaymentResult.succeeded("ref-1"));
+
+        assertThatThrownBy(() -> completionService.complete(paymentId, PaymentResult.declined()))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+    }
+
+    @Test
+    void givenDeclinedPayment_whenCompleteWithSucceeded_thenExpectInvalidStateAndNoChange() {
+        UUID orderId = placeOrder();
+        UUID paymentId = initiate(orderId);
+        completionService.complete(paymentId, PaymentResult.declined());
+
+        completionService.complete(paymentId, PaymentResult.declined());
+        assertThatThrownBy(() -> completionService.complete(paymentId, PaymentResult.succeeded("ref-1")))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("DECLINED");
+        assertThat(orderStatus(orderId)).isEqualTo("PLACED");
     }
 
     @Test
@@ -279,7 +315,7 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
         Optional<PaymentRequest> first = claimService.claimNext();
         assertThat(first).isPresent();
         assertThat(first.get().paymentId()).isEqualTo(paymentId);
-        assertThat(attemptCount(paymentId)).isEqualTo(1);
+        assertThat(claimCount(paymentId)).isEqualTo(1);
 
         // Leased, so it is not handed out again
         assertThat(claimService.claimNext()).isEmpty();
@@ -289,7 +325,10 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
         Optional<PaymentRequest> second = claimService.claimNext();
         assertThat(second).isPresent();
         assertThat(second.get().paymentId()).isEqualTo(paymentId);
-        assertThat(attemptCount(paymentId)).isEqualTo(2);
+        assertThat(claimCount(paymentId)).isEqualTo(2);
+
+        // Claiming alone is not a processor call
+        assertThat(attemptCount(paymentId)).isZero();
     }
 
     @Test
@@ -361,7 +400,7 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
     // Attempt cap
 
     @Test
-    void givenAttemptsExhausted_whenClaimNext_thenExpectAttemptFailedAndOrderPayableAgain() {
+    void givenProcessingAttemptsExhausted_whenClaimNext_thenExpectAttemptUnresolvedAndOrderBlocked() {
         UUID orderId = placeOrder();
         UUID paymentId = initiate(orderId);
         jdbcTemplate.update("update payment_attempt set attempt_count = ? where id = ?",
@@ -370,27 +409,238 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
 
         assertThat(claimService.claimNext()).isEmpty();
 
-        assertThat(attemptStatus(paymentId)).isEqualTo("FAILED");
-        assertThat(orderStatus(orderId)).isEqualTo("PLACED");
+        // The outcome is unknown, so the order must not go back to PLACED
+        assertThat(attemptStatus(paymentId)).isEqualTo("UNRESOLVED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_BLOCKED");
 
-        // A late result for the abandoned attempt changes nothing
-        completionService.complete(paymentId, PaymentResult.succeeded("late"));
-        assertThat(attemptStatus(paymentId)).isEqualTo("FAILED");
-        assertThat(orderStatus(orderId)).isEqualTo("PLACED");
-
-        // and the customer can pay again
-        UUID retry = initiate(orderId);
-        assertThat(attemptStatus(retry)).isEqualTo("PENDING");
+        // The customer can neither pay again nor cancel
+        assertThatThrownBy(() -> initiate(orderId)).isInstanceOf(InvalidStateTransitionException.class);
+        assertThat(orderService.cancelOrder(orderId)).isFalse();
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_BLOCKED");
+        assertThat(attemptRows(orderId)).isEqualTo(1);
     }
 
     @Test
-    void givenAttemptsBelowCap_whenClaimNext_thenExpectStillClaimable() {
+    void givenUnresolvedPayment_whenLateSucceededResult_thenExpectAttemptSucceededAndOrderPaid() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+
+        completionService.complete(paymentId, PaymentResult.succeeded("late"));
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+        assertThat(jdbcTemplate.queryForObject(
+                "select provider_reference from payment_attempt where id = ?", String.class, paymentId))
+                .isEqualTo("late");
+    }
+
+    @Test
+    void givenUnresolvedPayment_whenLateDeclinedResult_thenExpectAttemptDeclinedAndOrderPayableAgain() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+
+        completionService.complete(paymentId, PaymentResult.declined());
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("DECLINED");
+        assertThat(orderStatus(orderId)).isEqualTo("PLACED");
+        assertThat(attemptStatus(initiate(orderId))).isEqualTo("PENDING");
+    }
+
+    @Test
+    void givenUnresolvedPayment_whenLateResultRepeatedOrConflicting_thenExpectNoOpThenInvalidState() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+        completionService.complete(paymentId, PaymentResult.succeeded("late"));
+
+        completionService.complete(paymentId, PaymentResult.succeeded("late"));
+        assertThatThrownBy(() -> completionService.complete(paymentId, PaymentResult.declined()))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+    }
+
+    @Test
+    void givenUnresolvedPayment_whenLateResultThenReconciledWithSameResult_thenExpectNoOp() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+        completionService.complete(paymentId, PaymentResult.succeeded("late"));
+
+        reconciliationService.reconcile(paymentId, PaymentResult.succeeded("late"));
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+    }
+
+    @Test
+    void givenProcessingAttemptsBelowCap_whenClaimNext_thenExpectStillClaimable() {
         UUID paymentId = initiate(placeOrder());
         jdbcTemplate.update("update payment_attempt set attempt_count = ? where id = ?",
                 PaymentClaimService.MAX_ATTEMPTS - 1, paymentId);
 
         assertThat(claimService.claimNext()).isPresent();
+        assertThat(attemptStatus(paymentId)).isEqualTo("PENDING");
+        assertThat(claimService.recordProcessing(paymentId)).isTrue();
         assertThat(attemptCount(paymentId)).isEqualTo(PaymentClaimService.MAX_ATTEMPTS);
+    }
+
+    @Test
+    void givenManyClaimsWithoutProcessing_whenClaimNext_thenExpectNotBlocked() {
+        UUID orderId = placeOrder();
+        UUID paymentId = initiate(orderId);
+
+        // Workers that crash after claiming and before calling the processor
+        for (int i = 0; i < PaymentClaimService.MAX_ATTEMPTS + 2; i++) {
+            assertThat(claimService.claimNext()).isPresent();
+            expireLease(paymentId);
+        }
+
+        assertThat(claimCount(paymentId)).isEqualTo(PaymentClaimService.MAX_ATTEMPTS + 2);
+        assertThat(attemptCount(paymentId)).isZero();
+        assertThat(attemptStatus(paymentId)).isEqualTo("PENDING");
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_PENDING");
+    }
+
+    @Test
+    void givenRecordProcessing_whenAttemptNoLongerPending_thenExpectFalseAndNoCount() {
+        UUID paymentId = initiate(placeOrder());
+        completionService.complete(paymentId, PaymentResult.succeeded("ref"));
+
+        assertThat(claimService.recordProcessing(paymentId)).isFalse();
+        assertThat(claimService.recordProcessing(UUID.randomUUID())).isFalse();
+        assertThat(attemptCount(paymentId)).isZero();
+    }
+
+    @Test
+    void givenProviderKeepsFailing_whenProcessPendingPayments_thenExpectBlockedAfterMaxProcessorCalls() {
+        when(paymentProcessor.process(any())).thenThrow(new IllegalStateException("provider down"));
+        UUID orderId = placeOrder();
+        UUID paymentId = initiate(orderId);
+
+        for (int i = 0; i < PaymentClaimService.MAX_ATTEMPTS; i++) {
+            paymentDispatch.processPendingPayments();
+            assertThat(attemptStatus(paymentId)).isEqualTo("PENDING");
+            expireLease(paymentId);
+        }
+        verify(paymentProcessor, times(PaymentClaimService.MAX_ATTEMPTS)).process(any());
+
+        // The next tick finds the limit reached and blocks instead of calling the provider again
+        paymentDispatch.processPendingPayments();
+
+        verify(paymentProcessor, times(PaymentClaimService.MAX_ATTEMPTS)).process(any());
+        assertThat(attemptStatus(paymentId)).isEqualTo("UNRESOLVED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_BLOCKED");
+    }
+
+    // Reconciliation
+
+    private UUID blockedPayment(UUID orderId) {
+        UUID paymentId = initiate(orderId);
+        jdbcTemplate.update("update payment_attempt set attempt_count = ? where id = ?",
+                PaymentClaimService.MAX_ATTEMPTS, paymentId);
+        expireLease(paymentId);
+        assertThat(claimService.claimNext()).isEmpty();
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_BLOCKED");
+        return paymentId;
+    }
+
+    @Test
+    void givenBlockedPayment_whenReconciledSucceeded_thenExpectAttemptSucceededAndOrderPaid() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+
+        reconciliationService.reconcile(paymentId, PaymentResult.succeeded("ref-recon"));
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+        assertThat(jdbcTemplate.queryForObject(
+                "select provider_reference from payment_attempt where id = ?", String.class, paymentId))
+                .isEqualTo("ref-recon");
+    }
+
+    @Test
+    void givenBlockedPayment_whenReconciledDeclined_thenExpectAttemptDeclinedAndOrderPayableAgain() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+
+        reconciliationService.reconcile(paymentId, PaymentResult.declined());
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("DECLINED");
+        assertThat(orderStatus(orderId)).isEqualTo("PLACED");
+        assertThat(attemptStatus(initiate(orderId))).isEqualTo("PENDING");
+    }
+
+    @Test
+    void givenBlockedPayment_whenReconciledWithIndefiniteResult_thenExpectRejectedAndStillBlocked() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+
+        assertThatThrownBy(() -> reconciliationService.reconcile(paymentId,
+                new PaymentResult(PaymentStatus.UNRESOLVED, null)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> reconciliationService.reconcile(paymentId,
+                new PaymentResult(PaymentStatus.PENDING, null)))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("UNRESOLVED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_BLOCKED");
+    }
+
+    @Test
+    void givenReconciledPayment_whenReconciledAgainWithSameResult_thenExpectNoOp() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+        reconciliationService.reconcile(paymentId, PaymentResult.succeeded("ref"));
+
+        reconciliationService.reconcile(paymentId, PaymentResult.succeeded("ref"));
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+    }
+
+    @Test
+    void givenReconciledPayment_whenReconciledAgainWithConflictingResult_thenExpectInvalidStateAndNoChange() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+        reconciliationService.reconcile(paymentId, PaymentResult.succeeded("ref"));
+
+        assertThatThrownBy(() -> reconciliationService.reconcile(paymentId, PaymentResult.declined()))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
+        assertThat(orderStatus(orderId)).isEqualTo("PAID");
+    }
+
+    @Test
+    void givenDeclinedReconciliation_whenReconciledAgainWithSucceeded_thenExpectInvalidStateAndNoChange() {
+        UUID orderId = placeOrder();
+        UUID paymentId = blockedPayment(orderId);
+        reconciliationService.reconcile(paymentId, PaymentResult.declined());
+
+        reconciliationService.reconcile(paymentId, PaymentResult.declined());
+        assertThatThrownBy(() -> reconciliationService.reconcile(paymentId, PaymentResult.succeeded("ref")))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("DECLINED");
+        assertThat(orderStatus(orderId)).isEqualTo("PLACED");
+    }
+
+    @Test
+    void givenPendingPayment_whenReconciled_thenExpectInvalidStateAndNoChange() {
+        UUID orderId = placeOrder();
+        UUID paymentId = initiate(orderId);
+
+        assertThatThrownBy(() -> reconciliationService.reconcile(paymentId, PaymentResult.declined()))
+                .isInstanceOf(InvalidStateTransitionException.class);
+
+        assertThat(attemptStatus(paymentId)).isEqualTo("PENDING");
+        assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_PENDING");
+    }
+
+    @Test
+    void givenUnknownPayment_whenReconciled_thenExpectNotFound() {
+        assertThatThrownBy(() -> reconciliationService.reconcile(UUID.randomUUID(), PaymentResult.declined()))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     // Worker
@@ -401,7 +651,7 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
         UUID orderId = placeOrder();
         UUID paymentId = initiate(orderId);
 
-        defaultPaymentService.processPendingPayments();
+        paymentDispatch.processPendingPayments();
 
         assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
         assertThat(orderStatus(orderId)).isEqualTo("PAID");
@@ -415,7 +665,7 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
         UUID orderId = placeOrder();
         UUID paymentId = initiate(orderId);
 
-        defaultPaymentService.processPendingPayments();
+        paymentDispatch.processPendingPayments();
 
         assertThat(attemptStatus(paymentId)).isEqualTo("PENDING");
         assertThat(orderStatus(orderId)).isEqualTo("PAYMENT_PENDING");
@@ -425,11 +675,11 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
                 .isTrue();
 
         // Lease still held, so the next tick leaves it alone
-        defaultPaymentService.processPendingPayments();
+        paymentDispatch.processPendingPayments();
         verify(paymentProcessor, times(1)).process(any());
 
         expireLease(paymentId);
-        defaultPaymentService.processPendingPayments();
+        paymentDispatch.processPendingPayments();
 
         verify(paymentProcessor, times(2)).process(any());
         assertThat(attemptStatus(paymentId)).isEqualTo("SUCCEEDED");
@@ -443,7 +693,7 @@ public class PaymentFlowTest extends AbstractDatabaseTest {
         UUID orderId = placeOrder();
         UUID paymentId = initiate(orderId);
 
-        defaultPaymentService.processPendingPayments();
+        paymentDispatch.processPendingPayments();
 
         assertThat(attemptStatus(paymentId)).isEqualTo("DECLINED");
         assertThat(orderStatus(orderId)).isEqualTo("PLACED");

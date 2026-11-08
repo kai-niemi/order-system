@@ -549,23 +549,32 @@ duration of in-flight requests.
 
 ### Payments and Delivery
 
-Payments use the same idempotency mechanism as order placement. The fingerprint covers the order ID, so reusing a
-key with a different ID is rejected with `422`. A replay returns the current state of the payment attempt, which may
-have progressed since the original response.
+Payment attempts are processed by a scheduled worker that claims an attempt under a time-limited lease. The worker
+invokes the simulated payment processor outside any database transaction. Completion locks the payment attempt and 
+applies a definitive result only while the attempt is `PENDING`. This prevents duplicate completion but does not 
+prevent a worker with an expired lease from completing a still-pending attempt. The design relies on the provider 
+enforcing idempotency and returning a consistent definitive outcome for repeated requests using the same payment 
+attempt ID.
 
-Operations that are not legal in the current state of an order are rejected with `409 Conflict` and the
-`invalid-order-state` problem type, for example paying a cancelled order or delivering an order that is not paid. A
-request rejected this way leaves no idempotency record, so its key can be used again. Resources addressed by the request
-path that do not exist, such as an unknown order or a payment attempt under the wrong order, return `404 Not Found`.
+The retry limit counts processing dispatches rather than confirmed calls to the payment processor. Each dispatch is
+recorded before invoking the processor, so a crash between recording the dispatch and making the call may consume an
+attempt. 
 
-Delivery needs no idempotency key. Its outcome is a state, so delivering an order that is already delivered succeeds
-without any change, and a retry after a lost response returns `204 No Content`.
+Once five dispatches have been recorded and the lease has expired without a definitive result, the worker marks the
+attempt `UNRESOLVED` and the order `PAYMENT_BLOCKED` in a single transaction.
 
-Payment attempts are processed by a scheduled worker that claims an attempt under a time-limited lease. Completion
-locks the attempt and applies a result only while it is still pending, so a worker whose lease expired cannot apply a
-result twice, and no fencing token is needed. This relies on the payment provider treating the attempt identifier as its
-idempotency key. An attempt that is claimed five times without a result is marked `FAILED` and the order returns to
-`PLACED`, so that it can be paid again.
+A `PAYMENT_BLOCKED` order can be neither paid nor cancelled because the original payment may already have succeeded.
+Recovery requires `PaymentReconciliationService.reconcile`, using a definitive result obtained from the simulated 
+provider out of band. `SUCCEEDED` transitions the order to `PAID`, while `DECLINED` returns it to `PLACED`. 
+Reconciliation of an already settled attempt with the same result is a no-op; a conflicting result is treated 
+as a consistency error.
+
+The same rules apply when a worker delivers its result late. If the attempt is already `UNRESOLVED`, a definitive 
+result arriving through normal completion is applied like a reconciliation: the attempt settles and the blocked order
+is released. A result for an already settled attempt is a no-op when it matches and a consistency error when it differs.
+
+Only a confirmed decline, whether received during normal processing or established through reconciliation, returns the
+order to `PLACED`.
 
 ---
 

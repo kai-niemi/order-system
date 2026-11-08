@@ -32,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(classes = {ServerApplication.class})
-//@ActiveProfiles("dev")
 public class OrderPlacementTest extends AbstractIntegrationTest {
     private static final int PRODUCT_COUNT = 5;
 

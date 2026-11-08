@@ -60,7 +60,8 @@ class ProfileControllerTest {
     void orderSchemaDescribesItsStatesAndFormats() throws Exception {
         mockMvc.perform(get("/profiles/{profile}", ProfileController.ORDER))
                 .andExpect(jsonPath("$.properties.status.enum",
-                        containsInAnyOrder("PLACED", "CONFIRMED", "CANCELLED", "DELIVERED", "PAYMENT_PENDING", "PAID")))
+                        containsInAnyOrder("PLACED", "CONFIRMED", "CANCELLED", "DELIVERED", "PAYMENT_PENDING",
+                                "PAYMENT_BLOCKED", "PAID")))
                 .andExpect(jsonPath("$.properties.datePlaced.format").value("date-time"))
                 .andExpect(jsonPath("$.properties.deliveryAddress.properties.postcode.type").value("string"))
                 .andExpect(jsonPath("$.properties.id").doesNotExist());
