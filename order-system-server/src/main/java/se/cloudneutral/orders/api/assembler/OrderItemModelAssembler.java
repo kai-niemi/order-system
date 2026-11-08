@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.hateoas.LinkRelation;
 import org.springframework.stereotype.Component;
 
 import se.cloudneutral.orders.api.ProfileController;
@@ -15,7 +14,7 @@ import se.cloudneutral.orders.domain.PurchaseOrderItem;
 import se.cloudneutral.orders.api.OrderController;
 import se.cloudneutral.orders.api.ProductController;
 import se.cloudneutral.orders.api.model.OrderItemModel;
-import se.cloudneutral.orders.service.OrderService;
+import se.cloudneutral.orders.service.order.OrderService;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;

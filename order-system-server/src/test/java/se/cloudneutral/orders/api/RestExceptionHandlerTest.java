@@ -18,7 +18,6 @@ import se.cloudneutral.orders.config.JacksonConfig;
 import se.cloudneutral.orders.domain.InvalidStateTransitionException;
 import se.cloudneutral.orders.service.BusinessException;
 import se.cloudneutral.orders.service.IdempotencyException;
-
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

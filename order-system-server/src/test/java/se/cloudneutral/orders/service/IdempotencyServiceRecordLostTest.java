@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.idempotency;
+package se.cloudneutral.orders.service;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -13,9 +13,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import se.cloudneutral.orders.config.IdempotencyProperties;
 import se.cloudneutral.orders.repository.IdempotencyRepository;
-import se.cloudneutral.orders.service.IdempotencyException;
-import se.cloudneutral.orders.service.IdempotencyRequest;
-import se.cloudneutral.orders.service.IdempotencyService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

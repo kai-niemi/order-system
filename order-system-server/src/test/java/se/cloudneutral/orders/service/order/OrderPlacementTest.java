@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.order;
+package se.cloudneutral.orders.service.order;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,20 +13,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
 
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
+import se.cloudneutral.orders.AbstractIntegrationTest;
 import se.cloudneutral.orders.ServerApplication;
 import se.cloudneutral.orders.TestDataGenerator;
 import se.cloudneutral.orders.TestDataService;
 import se.cloudneutral.orders.domain.Customer;
+import se.cloudneutral.orders.domain.Product;
 import se.cloudneutral.orders.domain.PurchaseOrder;
 import se.cloudneutral.orders.domain.PurchaseOrderItem;
 import se.cloudneutral.orders.domain.ShipmentStatus;
-import se.cloudneutral.orders.domain.Product;
 import se.cloudneutral.orders.service.BusinessException;
-import se.cloudneutral.orders.service.OrderService;
 import se.cloudneutral.orders.util.MetadataUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

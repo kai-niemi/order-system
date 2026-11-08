@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.payment;
+package se.cloudneutral.orders.service.payment;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import se.cloudneutral.orders.domain.PaymentRequest;
 import se.cloudneutral.orders.domain.PaymentResult;
-import se.cloudneutral.orders.service.SimulatedPaymentProcessor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

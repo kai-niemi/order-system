@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import se.cloudneutral.orders.annotation.TransactionMandatory;
 import se.cloudneutral.orders.domain.Customer;
-import se.cloudneutral.orders.service.OrderService;
+import se.cloudneutral.orders.service.order.OrderService;
 import se.cloudneutral.orders.domain.PurchaseOrder;
 import se.cloudneutral.orders.domain.Product;
 import se.cloudneutral.orders.util.AssertUtils;

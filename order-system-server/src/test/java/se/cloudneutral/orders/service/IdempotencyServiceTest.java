@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.idempotency;
+package se.cloudneutral.orders.service;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -15,16 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PessimisticLockingFailureException;
 
+import se.cloudneutral.orders.AbstractDatabaseTest;
 import se.cloudneutral.orders.api.CreateOrderFacade;
 import se.cloudneutral.orders.api.NoSuchResourceException;
 import se.cloudneutral.orders.api.payload.CreateOrderItemRequest;
 import se.cloudneutral.orders.api.payload.CreateOrderRequest;
-import se.cloudneutral.orders.order.AbstractDatabaseTest;
 import se.cloudneutral.orders.repository.IdempotencyRepository;
-import se.cloudneutral.orders.service.IdempotencyException;
-import se.cloudneutral.orders.service.IdempotencyRequest;
-import se.cloudneutral.orders.service.IdempotencyResult;
-import se.cloudneutral.orders.service.IdempotencyService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

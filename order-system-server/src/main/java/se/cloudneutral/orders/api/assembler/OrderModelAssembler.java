@@ -14,7 +14,7 @@ import se.cloudneutral.orders.api.CustomerController;
 import se.cloudneutral.orders.api.OrderController;
 import se.cloudneutral.orders.api.model.AddressModel;
 import se.cloudneutral.orders.api.model.OrderModel;
-import se.cloudneutral.orders.service.OrderService;
+import se.cloudneutral.orders.service.order.OrderService;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.afford;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;

@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.payment;
+package se.cloudneutral.orders.service.payment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,18 +18,12 @@ import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.bean.override.BeanOverrideTestExecutionListener;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import se.cloudneutral.orders.AbstractDatabaseTest;
 import se.cloudneutral.orders.api.ResourceNotFoundException;
 import se.cloudneutral.orders.domain.InvalidStateTransitionException;
 import se.cloudneutral.orders.domain.PaymentRequest;
 import se.cloudneutral.orders.domain.PaymentResult;
 import se.cloudneutral.orders.domain.PaymentStatus;
-import se.cloudneutral.orders.order.AbstractDatabaseTest;
-import se.cloudneutral.orders.service.PaymentClaimService;
-import se.cloudneutral.orders.service.PaymentCompletionService;
-import se.cloudneutral.orders.service.PaymentCompletionScheduler;
-import se.cloudneutral.orders.service.PaymentProcessor;
-import se.cloudneutral.orders.service.PaymentReconciliationService;
-import se.cloudneutral.orders.service.PaymentService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

@@ -17,7 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import se.cloudneutral.orders.domain.InvalidStateTransitionException;
 import se.cloudneutral.orders.service.BusinessException;
 import se.cloudneutral.orders.service.IdempotencyException;
-import se.cloudneutral.orders.service.OrderService;
+import se.cloudneutral.orders.service.order.OrderService;
 
 /**
  * Translates service and web layer exceptions to RFC 9457 problem details. Extending

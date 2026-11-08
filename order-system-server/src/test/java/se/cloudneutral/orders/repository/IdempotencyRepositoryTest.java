@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.idempotency;
+package se.cloudneutral.orders.repository;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -11,9 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import se.cloudneutral.orders.AbstractDatabaseTest;
 import se.cloudneutral.orders.domain.IdempotencyRecord;
-import se.cloudneutral.orders.order.AbstractDatabaseTest;
-import se.cloudneutral.orders.repository.IdempotencyRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.service;
+package se.cloudneutral.orders.service.order;
 
 import java.util.List;
 import java.util.Optional;

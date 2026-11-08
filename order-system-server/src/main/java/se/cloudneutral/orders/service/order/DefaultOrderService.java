@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.service;
+package se.cloudneutral.orders.service.order;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -24,6 +24,7 @@ import se.cloudneutral.orders.domain.ShipmentStatus;
 import se.cloudneutral.orders.repository.CustomerRepository;
 import se.cloudneutral.orders.repository.OrderRepository;
 import se.cloudneutral.orders.repository.ProductRepository;
+import se.cloudneutral.orders.service.BusinessException;
 import se.cloudneutral.orders.util.AssertUtils;
 
 @Service

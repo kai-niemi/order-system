@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import se.cloudneutral.orders.domain.Customer;
-import se.cloudneutral.orders.service.OrderService;
+import se.cloudneutral.orders.service.order.OrderService;
 import se.cloudneutral.orders.api.assembler.CustomerModelAssembler;
 import se.cloudneutral.orders.api.model.CustomerModel;
 import se.cloudneutral.orders.api.model.OptionModel;

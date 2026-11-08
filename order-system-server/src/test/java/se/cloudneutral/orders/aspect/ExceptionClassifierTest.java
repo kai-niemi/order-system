@@ -9,7 +9,6 @@ import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import se.cloudneutral.orders.service.IdempotencyException;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Tag("unit-test")

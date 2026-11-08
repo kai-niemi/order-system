@@ -1,5 +1,6 @@
-package se.cloudneutral.orders.order;
+package se.cloudneutral.orders;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -8,17 +9,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import se.cloudneutral.orders.ServerApplication;
-import se.cloudneutral.orders.TestDataGenerator;
-import se.cloudneutral.orders.TestDataService;
 import se.cloudneutral.orders.api.payload.CreateOrderItemRequest;
 import se.cloudneutral.orders.api.payload.CreateOrderRequest;
 import se.cloudneutral.orders.domain.Customer;
 import se.cloudneutral.orders.domain.Product;
 import se.cloudneutral.orders.domain.PurchaseOrder;
-import se.cloudneutral.orders.service.OrderService;
-
-import java.util.List;
+import se.cloudneutral.orders.service.order.OrderService;
 
 /**
  * Base class for integration tests that need the reference database (PostgreSQL). Every test

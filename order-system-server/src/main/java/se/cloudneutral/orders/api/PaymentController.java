@@ -23,7 +23,7 @@ import se.cloudneutral.orders.domain.PaymentAttempt;
 import se.cloudneutral.orders.service.IdempotencyRequest;
 import se.cloudneutral.orders.service.IdempotencyResult;
 import se.cloudneutral.orders.service.IdempotencyService;
-import se.cloudneutral.orders.service.PaymentService;
+import se.cloudneutral.orders.service.payment.PaymentService;
 import static se.cloudneutral.orders.api.WebConstants.ANONYMOUS_SCOPE;
 import static se.cloudneutral.orders.api.WebConstants.HEADER_IDEMPOTENCY_KEY;
 import static se.cloudneutral.orders.api.WebConstants.HEADER_SIMULATE_TIMEOUT;

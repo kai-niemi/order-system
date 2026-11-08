@@ -10,7 +10,6 @@ import org.springframework.hateoas.AffordanceModel.PropertyMetadata;
 import org.springframework.hateoas.mediatype.PropertyUtils;
 
 import se.cloudneutral.orders.api.payload.CreateOrderRequest;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Tag("unit-test")

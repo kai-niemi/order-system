@@ -1,4 +1,4 @@
-package se.cloudneutral.orders.service;
+package se.cloudneutral.orders.service.delivery;
 
 import java.util.UUID;
 
