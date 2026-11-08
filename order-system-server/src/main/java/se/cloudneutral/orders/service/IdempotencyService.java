@@ -10,6 +10,7 @@ import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import se.cloudneutral.orders.annotation.TransactionBoundary;
 import se.cloudneutral.orders.aspect.ExceptionClassifier;
@@ -58,6 +59,7 @@ public class IdempotencyService {
     @TransactionBoundary
     public <T> IdempotencyResult<T> execute(
             IdempotencyRequest request,
+            UUID resourceId,
             Consumer<UUID> operation,
             Function<UUID, T> representation) {
 
@@ -68,23 +70,27 @@ public class IdempotencyService {
                 request.scope(),
                 request.key(),
                 fingerprint,
-                UUID.randomUUID(),
+                resourceId,
                 Instant.now().plus(properties.retention())
         );
 
         if (claimed.isPresent()) {
-            UUID resourceId = claimed.get();
-            operation.accept(resourceId);
-            return new IdempotencyResult<>(representation.apply(resourceId), false);
+            UUID claimedResourceId = claimed.get();
+            Assert.isTrue(claimedResourceId.equals(resourceId), "Resource id mismatch!");
+            operation.accept(claimedResourceId);
+            return new IdempotencyResult<>(representation.apply(claimedResourceId), false);
         }
 
         // An unsuccessful acquisition implies an existing, unexpired record.
         // ON CONFLICT DO UPDATE locks the conflicting row until transaction end,
         // even when its WHERE condition is false. Concurrent deletion is therefore
-        // prevented until the lookup completes.
+        // prevented until the lookup completes, so the record is expected to be found.
+        // The exception is a safety net for a genuine anomaly and clients should not be
+        // designed around it. It is not retried, a client retry simply claims the key.
         IdempotencyRecord existing = repository.findByKey(request.scope(), request.key())
-                .orElseThrow(() -> new IllegalStateException(
-                        "Idempotency record lost for key: " + request.key()));
+                .orElseThrow(() -> new IdempotencyException(
+                        IdempotencyException.Reason.RECORD_LOST,
+                        "Idempotency record vanished while the key was being claimed, retry the request"));
 
         if (!MessageDigest.isEqual(existing.fingerprint(), fingerprint)) {
             throw new IdempotencyException(

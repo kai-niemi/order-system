@@ -1,7 +1,6 @@
 package se.cloudneutral.orders;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 import se.cloudneutral.orders.domain.Address;
 import se.cloudneutral.orders.domain.Customer;
@@ -12,14 +11,12 @@ public abstract class TestDataGenerator {
     private TestDataGenerator() {
     }
 
-    public static final int DEFAULT_INVENTORY_QUANTITY = 500;
-
     public static Product randomProduct() {
         return Product.builder()
                 .withName(RandomData.randomProduct())
-                .withPrice(new BigDecimal("150.00").setScale(2, RoundingMode.UNNECESSARY))
+                .withPrice(RandomData.randomAmount(new BigDecimal("150.00"), new BigDecimal("500.00")))
                 .withSku(RandomData.randomSku(12))
-                .withInventory(DEFAULT_INVENTORY_QUANTITY)
+                .withInventory(RandomData.randomInventory())
                 .build();
     }
 

@@ -39,10 +39,8 @@ public class IndexController {
                                 .toUriString())
                         .withRel(LinkRelations.ACTUATORS_REL)
                         .withTitle("Spring boot actuators"))
-                .add(Link.of(ServletUriComponentsBuilder.fromCurrentContextPath()
-                                .pathSegment("guides", "index")
-                                .buildAndExpand()
-                                .toUriString())
+                .add(linkTo(methodOn(DocController.class)
+                        .guide("index"))
                         .withRel(IanaLinkRelations.HELP)
                         .withTitle("Guides to using the API"));
     }

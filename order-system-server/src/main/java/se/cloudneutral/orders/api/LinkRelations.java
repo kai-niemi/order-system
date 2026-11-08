@@ -19,6 +19,8 @@ public abstract class LinkRelations {
     public static final String CUSTOMER_COLL_REL = "customers";
 
     public static final String CANCEL_REL = "cancel";
+    public static final String PAY_REL = "pay";
+    public static final String DELIVER_REL = "deliver";
 
     public static final String CURIE_NAMESPACE = "os";
 

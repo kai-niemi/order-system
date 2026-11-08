@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
+#
+# Assembles the documentation sources into the .docs-build directory.
+#
+# It first checks that the schemas exported by export-schemas.sh exist in
+# docs/schemas (one non-empty JSON file per profile) and aborts otherwise,
+# before touching the previous build. It then recreates .docs-build and copies
+# in the server's rels, problems and guides resources, docs/index.md,
+# docs/profiles.md and docs/schemas.
+#
+# Usage:
+#   ./export-schemas.sh && ./prepare-docs.sh
+#
+# Run from the project root, since all paths are relative.
 
 set -euo pipefail
 
-SOURCE="order-system-server/src/main/resources"
+SOURCE="order-system-server/src/main/resources/doc"
 TARGET=".docs-build"
 
 # Ensure exported schemas exist before deleting the previous build

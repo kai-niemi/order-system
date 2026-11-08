@@ -4,9 +4,12 @@
 
 Identifies the transition that cancels an [order](order), moving it to the `cancelled` state.
 
-The link is present on an order only while the order can be cancelled. Its absence means the
-transition is not available, so a client should not attempt it and does not need to know the
-rule behind it. The rule is the server's, and may change.
+The link is present on an order only while the order can be cancelled, which is while it is
+`placed`. Once payment has been started the order is `payment_pending`, and it can no longer be
+cancelled. A declined payment returns the order to `placed`, where it can be cancelled again.
+
+Its absence means the transition is not available, so a client should not attempt it and does
+not need to know the rule behind it. The rule is the server's, and may change.
 
 ## Affordances
 
@@ -21,5 +24,6 @@ someone else cancelled it first, the request is rejected with the problem type
 ## Related link rels
 
 - [order](order) — the order that offers this transition.
+- [pay](pay) — the other transition offered while the order is `placed`.
 
 See also the guide [Cancelling an order](../guides/cancel-order).

@@ -28,13 +28,6 @@ import se.cloudneutral.orders.config.IdempotencyProperties;
 @EnableConfigurationProperties(IdempotencyProperties.class)
 @EnableScheduling
 public class ServerApplication {
-    //    public static void main(String[] args) {
-//        new SpringApplicationBuilder(ServerApplication.class)
-//                .logStartupInfo(true)
-//                .web(WebApplicationType.SERVLET)
-//                .bannerMode(Banner.Mode.CONSOLE)
-//                .run(args);
-//    }
     public static final String SPRING_PROFILES_ACTIVE = "spring.profiles.active";
 
     private static void printHelpAndExit(Consumer<PrintWriter> message) {

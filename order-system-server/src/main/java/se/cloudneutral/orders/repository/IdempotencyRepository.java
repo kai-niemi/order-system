@@ -105,9 +105,11 @@ public class IdempotencyRepository {
      */
     @TransactionBoundary
     public int deleteExpired(int batchSize) {
+        // The batch is a materialized CTE so that it is computed exactly once. As an IN subquery
+        // the planner may rescan it per outer row, and each rescan of a limited, skip locked
+        // query may return different rows, deleting more than batchSize rows in total.
         return jdbcTemplate.update("""
-                        delete from idempotency_record
-                        where (scope, idempotency_key) in (
+                        with batch as materialized (
                             select scope, idempotency_key
                             from idempotency_record
                             where expires_at < now()
@@ -115,6 +117,10 @@ public class IdempotencyRepository {
                             limit :batchSize
                             for update skip locked
                         )
+                        delete from idempotency_record r
+                        using batch b
+                        where r.scope = b.scope
+                          and r.idempotency_key = b.idempotency_key
                         """,
                 new MapSqlParameterSource("batchSize", batchSize));
     }

@@ -99,7 +99,8 @@ public class HypermediaClient {
             ResponseEntity<JsonNode> entity = request
                     .retrieve()
                     .toEntity(JsonNode.class);
-            return new Response(entity.getStatusCode(), entity.getHeaders(), new Representation(entity.getBody()));
+            return new Response(entity.getStatusCode(), entity.getHeaders(),
+                    new Representation(entity.getBody()));
         });
     }
 

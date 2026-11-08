@@ -65,8 +65,10 @@ without a `type` means no more than its status code.
 - [unknown-reference](../problems/unknown-reference)
 - [order-rejected](../problems/order-rejected)
 - [order-not-cancellable](../problems/order-not-cancellable)
+- [invalid-order-state](../problems/invalid-order-state)
 
 ## Guides
 
 - [Placing an order](create-order)
 - [Cancelling an order](cancel-order)
+- [Paying for and delivering an order](pay-and-deliver-order)

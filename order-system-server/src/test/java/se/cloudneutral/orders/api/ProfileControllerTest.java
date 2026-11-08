@@ -13,7 +13,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import se.cloudneutral.orders.config.JacksonConfig;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -61,7 +60,7 @@ class ProfileControllerTest {
     void orderSchemaDescribesItsStatesAndFormats() throws Exception {
         mockMvc.perform(get("/profiles/{profile}", ProfileController.ORDER))
                 .andExpect(jsonPath("$.properties.status.enum",
-                        containsInAnyOrder("placed", "confirmed", "cancelled", "delivered")))
+                        containsInAnyOrder("PLACED", "CONFIRMED", "CANCELLED", "DELIVERED", "PAYMENT_PENDING", "PAID")))
                 .andExpect(jsonPath("$.properties.datePlaced.format").value("date-time"))
                 .andExpect(jsonPath("$.properties.deliveryAddress.properties.postcode.type").value("string"))
                 .andExpect(jsonPath("$.properties.id").doesNotExist());

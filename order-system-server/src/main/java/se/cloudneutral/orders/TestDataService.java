@@ -14,6 +14,7 @@ import se.cloudneutral.orders.domain.Customer;
 import se.cloudneutral.orders.domain.Product;
 import se.cloudneutral.orders.repository.CustomerRepository;
 import se.cloudneutral.orders.repository.OrderRepository;
+import se.cloudneutral.orders.repository.PaymentAttemptRepository;
 import se.cloudneutral.orders.repository.ProductRepository;
 import se.cloudneutral.orders.util.StreamUtils;
 
@@ -28,6 +29,9 @@ public class TestDataService {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private PaymentAttemptRepository paymentAttemptRepository;
+
     public boolean isEmpty() {
         return productRepository.count() == 0
                 && customerRepository.count() == 0;
@@ -37,6 +41,7 @@ public class TestDataService {
     public void deleteAllData() {
         Assert.isTrue(TransactionSynchronizationManager.isActualTransactionActive(), "TX not active");
 
+        paymentAttemptRepository.deleteAllInBatch();
         orderRepository.deleteAllOrderItems();
         orderRepository.deleteAllInBatch();
         productRepository.deleteAllInBatch();

@@ -1,33 +1,34 @@
 <!-- TOC -->
 * [Order System REST API](#order-system-rest-api)
-  * [Introduction](#introduction)
-    * [Link Relations and CURIEs](#link-relations-and-curies)
-    * [Guides](#guides)
-    * [Resource Schemas](#resource-schemas)
-    * [Content Negotiation](#content-negotiation)
-  * [Discover the API](#discover-the-api)
-  * [Browse Products and Customers](#browse-products-and-customers)
-  * [Create an Order](#create-an-order)
-    * [1. Discover the Order Form](#1-discover-the-order-form)
-    * [2. Retrieve the Form](#2-retrieve-the-form)
-    * [3. Submit the Order](#3-submit-the-order)
-      * [Using HAL-FORMS](#using-hal-forms)
-      * [Direct HTTP Alternative](#direct-http-alternative)
-    * [4. Successful Response](#4-successful-response)
-  * [Idempotency](#idempotency)
-    * [Retrying the Same Request](#retrying-the-same-request)
-    * [Reusing a Key with a Different Request](#reusing-a-key-with-a-different-request)
-    * [Idempotency Semantics](#idempotency-semantics)
-  * [Navigate Orders](#navigate-orders)
-    * [Order Line Items](#order-line-items)
-  * [Cancel an Order](#cancel-an-order)
-    * [Discover the Cancellation Affordance](#discover-the-cancellation-affordance)
-    * [Perform the Cancellation](#perform-the-cancellation)
-    * [State-Dependent Operations](#state-dependent-operations)
-  * [Error Responses](#error-responses)
-    * [Example: Missing Idempotency Key](#example-missing-idempotency-key)
-    * [Application Error Types](#application-error-types)
-  * [Interactive Hypermedia Client](#interactive-hypermedia-client)
+    * [Introduction](#introduction)
+        * [Link Relations and CURIEs](#link-relations-and-curies)
+        * [Guides](#guides)
+        * [Resource Schemas](#resource-schemas)
+        * [Content Negotiation](#content-negotiation)
+    * [Discover the API](#discover-the-api)
+    * [Browse Products and Customers](#browse-products-and-customers)
+    * [Create an Order](#create-an-order)
+        * [1. Discover the Order Form](#1-discover-the-order-form)
+        * [2. Retrieve the Form](#2-retrieve-the-form)
+        * [3. Submit the Order](#3-submit-the-order)
+            * [Using HAL-FORMS](#using-hal-forms)
+            * [Direct HTTP Alternative](#direct-http-alternative)
+        * [4. Successful Response](#4-successful-response)
+    * [Idempotency](#idempotency)
+        * [Retrying the Same Request](#retrying-the-same-request)
+        * [Reusing a Key with a Different Request](#reusing-a-key-with-a-different-request)
+        * [Idempotency Semantics](#idempotency-semantics)
+        * [Payments and Delivery](#payments-and-delivery)
+    * [Navigate Orders](#navigate-orders)
+        * [Order Line Items](#order-line-items)
+    * [Cancel an Order](#cancel-an-order)
+        * [Discover the Cancellation Affordance](#discover-the-cancellation-affordance)
+        * [Perform the Cancellation](#perform-the-cancellation)
+        * [State-Dependent Operations](#state-dependent-operations)
+    * [Error Responses](#error-responses)
+        * [Example: Missing Idempotency Key](#example-missing-idempotency-key)
+        * [Application Error Types](#application-error-types)
+    * [Interactive Hypermedia Client](#interactive-hypermedia-client)
 <!-- TOC -->
 
 # Order System REST API
@@ -545,6 +546,26 @@ PostgreSQL is the reference database. The implementation does not depend on a da
 
 The retention period defines the replay eligibility window. It should not be interpreted as a guarantee about the
 duration of in-flight requests.
+
+### Payments and Delivery
+
+Payments use the same idempotency mechanism as order placement. The fingerprint covers the order ID, so reusing a
+key with a different ID is rejected with `422`. A replay returns the current state of the payment attempt, which may
+have progressed since the original response.
+
+Operations that are not legal in the current state of an order are rejected with `409 Conflict` and the
+`invalid-order-state` problem type, for example paying a cancelled order or delivering an order that is not paid. A
+request rejected this way leaves no idempotency record, so its key can be used again. Resources addressed by the request
+path that do not exist, such as an unknown order or a payment attempt under the wrong order, return `404 Not Found`.
+
+Delivery needs no idempotency key. Its outcome is a state, so delivering an order that is already delivered succeeds
+without any change, and a retry after a lost response returns `204 No Content`.
+
+Payment attempts are processed by a scheduled worker that claims an attempt under a time-limited lease. Completion
+locks the attempt and applies a result only while it is still pending, so a worker whose lease expired cannot apply a
+result twice, and no fencing token is needed. This relies on the payment provider treating the attempt identifier as its
+idempotency key. An attempt that is claimed five times without a result is marked `FAILED` and the order returns to
+`PLACED`, so that it can be paid again.
 
 ---
 

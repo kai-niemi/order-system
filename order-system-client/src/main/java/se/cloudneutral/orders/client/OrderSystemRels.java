@@ -28,6 +28,10 @@ public abstract class OrderSystemRels {
     // Offered on an order only while it can be cancelled
     public static final String CANCEL = of("cancel");
 
+    public static final String PAY = of("pay");
+
+    public static final String DELIVER = of("deliver");
+
     // IANA registered relations, used without a prefix
 
     public static final String SELF = "self";

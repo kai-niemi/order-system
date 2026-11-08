@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import se.cloudneutral.orders.domain.InvalidStateTransitionException;
 import se.cloudneutral.orders.service.BusinessException;
 import se.cloudneutral.orders.service.IdempotencyException;
 import se.cloudneutral.orders.service.OrderService;
@@ -39,12 +40,12 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleServletRequestBindingException(
             ServletRequestBindingException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         if (ex instanceof MissingRequestHeaderException missing
-            && OrderController.HEADER_IDEMPOTENCY_KEY.equalsIgnoreCase(missing.getHeaderName())) {
+            && WebConstants.HEADER_IDEMPOTENCY_KEY.equalsIgnoreCase(missing.getHeaderName())) {
             ProblemDetail problem = ex.getBody();
             problem.setType(ProblemTypes.IDEMPOTENCY_KEY_REQUIRED);
             problem.setTitle("Idempotency key required");
             problem.setDetail("Placing an order requires an '%s' header identifying the attempt"
-                    .formatted(OrderController.HEADER_IDEMPOTENCY_KEY));
+                    .formatted(WebConstants.HEADER_IDEMPOTENCY_KEY));
         }
         return super.handleServletRequestBindingException(ex, headers, status, request);
     }
@@ -73,6 +74,20 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleNoSuchResource(NoSuchResourceException ex) {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT,
                 ProblemTypes.UNKNOWN_REFERENCE, "Unknown resource reference", ex.getMessage());
+    }
+
+    /**
+     * The operation is not legal in the current order state, for example paying a cancelled order.
+     */
+    @ExceptionHandler(InvalidStateTransitionException.class)
+    public ProblemDetail handleInvalidStateTransition(InvalidStateTransitionException ex) {
+        return problem(HttpStatus.CONFLICT,
+                ProblemTypes.INVALID_ORDER_STATE, "Invalid order state", ex.getMessage());
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleResourceNotFound(ResourceNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     static ProblemDetail problem(HttpStatus status, URI type, String title, String detail) {

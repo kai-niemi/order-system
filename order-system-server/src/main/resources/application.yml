@@ -108,6 +108,8 @@ management:
         include: health,info,shutdown,env,metrics
 ############################################
 app:
+  simulation:
+    processing-interval: 5s
   idempotency:
     # How long a record stays live after it is claimed
     retention: 24h

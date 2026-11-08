@@ -10,16 +10,27 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import se.cloudneutral.orders.domain.PurchaseOrder;
 import se.cloudneutral.orders.domain.ShipmentStatus;
 
 @Repository
 public interface OrderRepository extends JpaRepository<PurchaseOrder, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT o
+        FROM PurchaseOrder o
+        WHERE o.id = :id
+        """)
+    Optional<PurchaseOrder> findByIdForUpdate(UUID id);
+
     @Query("""
         select o.id
         from PurchaseOrder o

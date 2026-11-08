@@ -26,7 +26,11 @@ import se.cloudneutral.orders.client.shell.support.Table;
 public class OrderCommands {
     private static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
 
+    private static final String HEADER_SIMULATE_TIMEOUT = "X-Simulate-Timeout";
+
     private static final String HEADER_IDEMPOTENCY_REPLAYED = "Idempotency-Replayed";
+
+    private static final String ORDER_COMMANDS = "Order Commands";
 
     private final HypermediaClient client;
 
@@ -37,12 +41,162 @@ public class OrderCommands {
         this.client = client;
     }
 
+    @Command(name = {"order", "place"},
+            alias = "oc",
+            group = ORDER_COMMANDS,
+            description = "Place an order by filling in the order form and submitting its HAL-FORMS affordance")
+    public String createOrder(
+            @Option(longName = "products", shortName = 'p', defaultValue = "1",
+                    description = "Number of products on the order, picked by the server") int products,
+            @Option(longName = "key", shortName = 'k',
+                    description = "Idempotency key, random if omitted. Each call fills in a new form, "
+                                  + "so reusing a key is rejected as a different request")
+            String key) {
+        Link formLink = client.root().link(OrderSystemRels.ORDERS_FORM)
+                .orElseThrow(() -> new IllegalStateException("API root has no order form link"));
+
+        // Ask for HAL-FORMS, so the form carries the templates describing how to submit it
+        Representation form = client.get(formLink.expand(Map.of("products", products)),
+                HypermediaClient.HAL_FORMS_JSON);
+
+        // The 'order' link is the documented affordance, its template says how to use it
+        Link orderLink = form.link(OrderSystemRels.ORDER)
+                .orElseThrow(() -> new IllegalStateException("Order form has no 'order' affordance"));
+        Template template = form.templateFor(orderLink)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Order form has no template for %s".formatted(orderLink.href())));
+
+        String idempotencyKey = key != null ? key : UUID.randomUUID().toString();
+
+        Response response = client.submit(template, form.properties(),
+                Map.of(HEADER_IDEMPOTENCY_KEY, idempotencyKey));
+
+        Representation order = response.representation();
+        lastPlacedOrder = order.link(OrderSystemRels.SELF).map(Link::toUri).orElse(null);
+
+        Representation items = client.follow(order, OrderSystemRels.ITEMS);
+
+        Table table = new Table("SKU", "Name", "Quantity", "Unit price", "Total");
+        items.embedded(OrderSystemRels.ORDER_ITEMS).forEach(item -> table.addRow(
+                item.get("productSku").asString(),
+                item.get("productName").asString(),
+                item.get("quantity").asString(),
+                item.get("unitPrice").asString(),
+                item.get("totalCost").asString()));
+
+        return String.join(System.lineSeparator(),
+                "%s %s".formatted(response.status(), response.headers().getFirst(HttpHeaders.LOCATION)),
+                "Status:          %s".formatted(order.get("status").asString()),
+                "Customer:        %s".formatted(order.get("customerName").asString()),
+                "Total price:     %s".formatted(order.get("totalPrice").asString()),
+                "Idempotency-Key: %s (replayed: %s)"
+                        .formatted(idempotencyKey, response.headers().getFirst(HEADER_IDEMPOTENCY_REPLAYED)),
+                "",
+                table.render());
+    }
+
+    @Command(name = {"order", "pay"},
+            alias = "op",
+            group = ORDER_COMMANDS,
+            description = "Pay an order through its 'pay' HAL-FORMS affordance, offered only while it can be paid")
+    public String payOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order create'. "
+                                                              + "Defaults to the last order placed in this session")
+                           String orderUri,
+                           @Option(longName = "key", shortName = 'k',
+                                   description = "Idempotency key, random if omitted. Each call fills in a new form, "
+                                                 + "so reusing a key is rejected as a different request")
+                           String key,
+                           @Option(longName = "timeout",
+                                   description = "Simulate a server side payment flow timeout to test idempotency",
+                                   defaultValue = "false")
+                           boolean simulateTimeout) {
+        URI uri;
+        if (StringUtils.hasText(orderUri)) {
+            uri = URI.create(orderUri);
+        } else if (lastPlacedOrder != null) {
+            uri = lastPlacedOrder;
+        } else {
+            throw new IllegalArgumentException("No order URI given, and no order placed in this session");
+        }
+
+        // Ask for HAL-FORMS, so the order carries the templates for the transitions legal right now
+        Representation order = client.get(uri, HypermediaClient.HAL_FORMS_JSON);
+
+        // Whether an order can be paid is the server's rule: no affordance, no request
+        Optional<Link> payLink = order.link(OrderSystemRels.PAY);
+        if (payLink.isEmpty()) {
+            return "Order is %s, the server offers no payment for it: %s"
+                    .formatted(order.get("status").asString(), uri);
+        }
+
+        Template template = order.templateFor(payLink.get())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Order has no template for %s".formatted(payLink.get().href())));
+
+        String idempotencyKey = key != null ? key : UUID.randomUUID().toString();
+
+        // The template has no properties, so there is nothing to send
+        Response response = client.submit(template, null,
+                Map.of(HEADER_IDEMPOTENCY_KEY, idempotencyKey,
+                        HEADER_SIMULATE_TIMEOUT, simulateTimeout ? "yes" : "no"));
+
+        Representation payment = response.representation();
+
+        return String.join(System.lineSeparator(),
+                "%s %s".formatted(response.status(), uri),
+                "          Status: %s".formatted(payment.get("status").asString()),
+                " Idempotency-Key: %s (replayed: %s)".formatted(idempotencyKey,
+                        response.headers().getFirst(HEADER_IDEMPOTENCY_REPLAYED)),
+                "Delivery offered: %s".formatted(payment.link(OrderSystemRels.DELIVER).isPresent()));
+    }
+
+    @Command(name = {"order", "deliver"},
+            alias = "od",
+            group = ORDER_COMMANDS,
+            description = "Deliver an order through its 'deliver' HAL-FORMS affordance, offered only after its paid")
+    public String deliverOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order create'. "
+                                                                  + "Defaults to the last order placed in this session")
+                               String orderUri) {
+        URI uri;
+        if (StringUtils.hasText(orderUri)) {
+            uri = URI.create(orderUri);
+        } else if (lastPlacedOrder != null) {
+            uri = lastPlacedOrder;
+        } else {
+            throw new IllegalArgumentException("No order URI given, and no order placed in this session");
+        }
+
+        // Ask for HAL-FORMS, so the order carries the templates for the transitions legal right now
+        Representation order = client.get(uri, HypermediaClient.HAL_FORMS_JSON);
+
+        // Whether an order can be delivered is the server's rule: no affordance, no request
+        Optional<Link> deliverLink = order.link(OrderSystemRels.DELIVER);
+        if (deliverLink.isEmpty()) {
+            return "Order is %s, the server offers no delivery for it: %s"
+                    .formatted(order.get("status").asString(), uri);
+        }
+
+        Template template = order.templateFor(deliverLink.get())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Order has no template for %s".formatted(deliverLink.get().href())));
+
+        // The template has no properties, so there is nothing to send
+        Response response = client.submit(template, null, Map.of());
+
+        Representation payment = response.representation();
+
+        return String.join(System.lineSeparator(),
+                "%s %s".formatted(response.status(), uri),
+                "Order: %s".formatted(payment.link(OrderSystemRels.SELF).isPresent()));
+    }
+
     @Command(name = {"order", "cancel"},
             alias = "ox",
-            group = "3. Order Commands",
+            group = ORDER_COMMANDS,
             description = "Cancel an order through its 'cancel' HAL-FORMS affordance, offered only while it can be cancelled")
     public String cancelOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order create'. "
-                                  + "Defaults to the last order placed in this session") String orderUri) {
+                                                                 + "Defaults to the last order placed in this session")
+                              String orderUri) {
         URI uri;
         if (StringUtils.hasText(orderUri)) {
             uri = URI.create(orderUri);
@@ -69,7 +223,7 @@ public class OrderCommands {
         // The template has no properties, so there is nothing to send
         Response response = client.submit(template, null, Map.of());
 
-        Representation cancelled = response.resource();
+        Representation cancelled = response.representation();
 
         return String.join(System.lineSeparator(),
                 "%s %s".formatted(response.status(), uri),
@@ -79,61 +233,8 @@ public class OrderCommands {
                 "Cancel offered:  %s".formatted(cancelled.link(OrderSystemRels.CANCEL).isPresent()));
     }
 
-    @Command(name = {"order", "create"},
-            alias = "oc",
-            group = "3. Order Commands",
-            description = "Place an order by filling in the order form and submitting its HAL-FORMS affordance")
-    public String createOrder(
-            @Option(longName = "products", shortName = 'p', defaultValue = "1",
-                    description = "Number of products on the order, picked by the server") int products,
-            @Option(longName = "key", shortName = 'k',
-                    description = "Idempotency key, random if omitted. Each call fills in a new form, "
-                                  + "so reusing a key is rejected as a different request")
-            String key) {
-        Link formLink = client.root().link(OrderSystemRels.ORDERS_FORM)
-                .orElseThrow(() -> new IllegalStateException("API root has no order form link"));
-
-        // Ask for HAL-FORMS, so the form carries the templates describing how to submit it
-        Representation form = client.get(formLink.expand(Map.of("products", products)), HypermediaClient.HAL_FORMS_JSON);
-
-        // The 'order' link is the documented affordance, its template says how to use it
-        Link orderLink = form.link(OrderSystemRels.ORDER)
-                .orElseThrow(() -> new IllegalStateException("Order form has no 'order' affordance"));
-        Template template = form.templateFor(orderLink)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Order form has no template for %s".formatted(orderLink.href())));
-
-        String idempotencyKey = key != null ? key : UUID.randomUUID().toString();
-
-        Response response = client.submit(template, form.properties(),
-                Map.of(HEADER_IDEMPOTENCY_KEY, idempotencyKey));
-
-        Representation order = response.resource();
-        lastPlacedOrder = order.link(OrderSystemRels.SELF).map(Link::toUri).orElse(null);
-
-        Representation items = client.follow(order, OrderSystemRels.ITEMS);
-
-        Table table = new Table("SKU", "Name", "Quantity", "Unit price", "Total");
-        items.embedded(OrderSystemRels.ORDER_ITEMS).forEach(item -> table.addRow(
-                item.get("productSku").asString(),
-                item.get("productName").asString(),
-                item.get("quantity").asString(),
-                item.get("unitPrice").asString(),
-                item.get("totalCost").asString()));
-
-        return String.join(System.lineSeparator(),
-                "%s %s".formatted(response.status(), response.headers().getFirst(HttpHeaders.LOCATION)),
-                "Status:          %s".formatted(order.get("status").asString()),
-                "Customer:        %s".formatted(order.get("customerName").asString()),
-                "Total price:     %s".formatted(order.get("totalPrice").asString()),
-                "Idempotency-Key: %s (replayed: %s)".formatted(idempotencyKey,
-                        response.headers().getFirst(HEADER_IDEMPOTENCY_REPLAYED)),
-                "",
-                table.render());
-    }
-
     @Command(name = {"order", "list"},
-            group = "3. Order Commands",
+            group = ORDER_COMMANDS,
             alias = "ol",
             description = "List orders, discovered from the API root and paged by following 'next' links")
     public String listOrders(

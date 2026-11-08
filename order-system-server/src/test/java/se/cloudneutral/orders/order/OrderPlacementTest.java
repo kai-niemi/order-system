@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.ActiveProfiles;
 
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(classes = {ServerApplication.class})
+//@ActiveProfiles("dev")
 public class OrderPlacementTest extends AbstractIntegrationTest {
     private static final int PRODUCT_COUNT = 5;
 
@@ -88,7 +90,7 @@ public class OrderPlacementTest extends AbstractIntegrationTest {
         assertThat(orderPage.getTotalElements()).isEqualTo(1);
 
         PurchaseOrder purchaseOrder = orderPage.getContent().getFirst();
-        assertThat(purchaseOrder.getStatus()).isEqualTo(ShipmentStatus.placed);
+        assertThat(purchaseOrder.getStatus()).isEqualTo(ShipmentStatus.PLACED);
     }
 
     @Order(3)

@@ -19,6 +19,7 @@ import org.springframework.hateoas.mediatype.Affordances;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,27 +28,27 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import se.cloudneutral.orders.annotation.TransactionBoundary;
-import se.cloudneutral.orders.domain.Customer;
-import se.cloudneutral.orders.service.IdempotencyRequest;
-import se.cloudneutral.orders.service.IdempotencyResult;
-import se.cloudneutral.orders.service.IdempotencyService;
-import se.cloudneutral.orders.service.OrderService;
-import se.cloudneutral.orders.domain.PurchaseOrder;
-import se.cloudneutral.orders.domain.PurchaseOrderItem;
-import se.cloudneutral.orders.domain.ShipmentStatus;
 import se.cloudneutral.orders.api.assembler.OrderItemModelAssembler;
 import se.cloudneutral.orders.api.assembler.OrderModelAssembler;
 import se.cloudneutral.orders.api.model.OrderItemModel;
 import se.cloudneutral.orders.api.model.OrderModel;
 import se.cloudneutral.orders.api.payload.CreateOrderItemRequest;
 import se.cloudneutral.orders.api.payload.CreateOrderRequest;
+import se.cloudneutral.orders.domain.Customer;
+import se.cloudneutral.orders.domain.PurchaseOrder;
+import se.cloudneutral.orders.domain.PurchaseOrderItem;
+import se.cloudneutral.orders.domain.ShipmentStatus;
+import se.cloudneutral.orders.service.DeliveryService;
+import se.cloudneutral.orders.service.IdempotencyRequest;
+import se.cloudneutral.orders.service.IdempotencyResult;
+import se.cloudneutral.orders.service.IdempotencyService;
+import se.cloudneutral.orders.service.OrderService;
 import se.cloudneutral.orders.util.AssertUtils;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -58,15 +59,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RequestMapping(value = "/api/orders",
         produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
 public class OrderController {
-    public static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
-
-    public static final String HEADER_IDEMPOTENCY_REPLAYED = "Idempotency-Replayed";
-
-    /**
-     * Idempotency scope used when the request carries no authenticated principal.
-     */
-    private static final String ANONYMOUS_SCOPE = "anonymous";
-
     @Autowired
     private HttpServletRequest httpRequest;
 
@@ -75,6 +67,9 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private DeliveryService deliveryService;
 
     @Autowired
     private OrderModelAssembler orderModelAssembler;
@@ -128,18 +123,19 @@ public class OrderController {
      */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<OrderModel> createOrder(
-            @RequestHeader(HEADER_IDEMPOTENCY_KEY) String key,
+            @RequestHeader(WebConstants.HEADER_IDEMPOTENCY_KEY) String key,
             @Valid @RequestBody CreateOrderRequest request) {
 
         // Keys are scoped to the authenticated principal so that clients choosing the same key
         // never collide. Method and path are part of the request fingerprint.
         String scope = httpRequest.getUserPrincipal() != null
                 ? httpRequest.getUserPrincipal().getName()
-                : ANONYMOUS_SCOPE;
+                : WebConstants.ANONYMOUS_SCOPE;
 
         IdempotencyResult<OrderModel> result = idempotencyService.execute(
                 new IdempotencyRequest(scope, key,
                         httpRequest.getMethod(), httpRequest.getRequestURI(), request),
+                UUID.randomUUID(),
                 orderId -> createOrderFacade.createOrder(orderId, request),
                 this::findOrderModel
         );
@@ -148,7 +144,7 @@ public class OrderController {
 
         return ResponseEntity
                 .created(model.getRequiredLink(IanaLinkRelations.SELF).toUri())
-                .header(HEADER_IDEMPOTENCY_REPLAYED, Boolean.toString(result.replayed()))
+                .header(WebConstants.HEADER_IDEMPOTENCY_REPLAYED, Boolean.toString(result.replayed()))
                 .body(model);
     }
 
@@ -191,7 +187,7 @@ public class OrderController {
     }
 
     /**
-     * Cancels an order that is still in {@link ShipmentStatus#placed}.
+     * Cancels an order that is still in {@link ShipmentStatus#PLACED}.
      * Advertised as the {@code cancel} HAL-FORMS template on the order representation, which only
      * appears while the transition is legal.
      */
@@ -213,6 +209,15 @@ public class OrderController {
         }
 
         return findOrderModel(id);
+    }
+
+    @PostMapping("/{id}/delivery")
+    public ResponseEntity<Void> deliverOrder(@PathVariable("id") UUID id) {
+        AssertUtils.assertNoTransaction();
+
+        deliveryService.deliver(id);
+
+        return ResponseEntity.noContent().build();
     }
 
     // placeOrder returns line items holding placeholder products carrying only id and sku,

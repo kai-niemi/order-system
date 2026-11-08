@@ -27,10 +27,12 @@ create table if not exists product
 
 create type shipment_status as enum
 (
-    'placed',
-    'confirmed',
-    'cancelled',
-    'delivered'
+    'PLACED',
+    'CONFIRMED',
+    'PAYMENT_PENDING',
+    'PAID',
+    'CANCELLED',
+    'DELIVERED'
 );
 
 create cast (varchar as shipment_status) with inout as implicit;
@@ -41,7 +43,7 @@ create table if not exists purchase_order
     customer_id    uuid            not null,
     total_price    numeric(19, 2)  not null,
     tags           varchar(128)    null,
-    status         shipment_status not null default 'placed',
+    status         shipment_status not null default 'PLACED',
     date_placed    timestamptz     not null default now(),
     date_updated   timestamptz     not null default now(),
 
@@ -65,6 +67,30 @@ create table if not exists purchase_order_item
     item_pos   int            not null,
 
     primary key (order_id, item_pos)
+);
+
+create type payment_status as enum
+    (
+        'PENDING',
+        'SUCCEEDED',
+        'FAILED',
+        'DECLINED'
+    );
+
+create cast (varchar as payment_status) with inout as implicit;
+
+create table payment_attempt
+(
+    id                 uuid           not null,
+    order_id           uuid           not null,
+    amount             numeric(19, 2) not null,
+    status             payment_status not null default 'PENDING',
+    provider_reference varchar(255),
+    lease_until        timestamptz,
+    attempt_count      integer        not null default 0,
+    simulate_timeout   bool           not null default false,
+
+    primary key (id)
 );
 
 -- Keyed per (scope, idempotency_key), where scope is the authenticated principal or tenant.
@@ -105,6 +131,16 @@ alter table if exists purchase_order
     add constraint fk_order_ref_customer
     foreign key (customer_id)
     references customer;
+
+alter table if exists payment_attempt
+    add constraint fk_payment_attempt_ref_order
+    foreign key (order_id)
+    references purchase_order;
+
+-- At most one active payment attempt per order. Backstop for the row lock taken in
+-- DefaultPaymentService.initiatePayment.
+create unique index uq_payment_attempt_one_pending_per_order
+    on payment_attempt (order_id) where status = 'PENDING';
 
 -- Foreign key indexes
 create index fk_order_item_ref_product_idx on purchase_order_item (product_id);

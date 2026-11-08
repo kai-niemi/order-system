@@ -5,6 +5,7 @@ import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
 import se.cloudneutral.orders.api.LinkRelations;
+import se.cloudneutral.orders.api.PaymentController;
 import se.cloudneutral.orders.api.ProfileController;
 import se.cloudneutral.orders.domain.Customer;
 import se.cloudneutral.orders.domain.PurchaseOrder;
@@ -58,8 +59,13 @@ public class OrderModelAssembler implements RepresentationModelAssembler<Purchas
                         .withTitle("Customer that placed the order"))
                 .add(ProfileController.describedBy(ProfileController.ORDER));
 
-        if (order.getStatus() == ShipmentStatus.placed) {
+        if (order.getStatus() == ShipmentStatus.PLACED) {
             model.add(cancelLink(order));
+            model.add(payLink(order));
+        }
+
+        if (order.getStatus() == ShipmentStatus.PAID) {
+            model.add(deliverLink(order));
         }
 
         return model;
@@ -71,5 +77,21 @@ public class OrderModelAssembler implements RepresentationModelAssembler<Purchas
                 .withRel(LinkRelations.CANCEL_REL)
                 .andAffordance(afford(methodOn(OrderController.class)
                         .cancelOrder(order.getId())));
+    }
+
+    private Link payLink(PurchaseOrder order) {
+        return linkTo(methodOn(PaymentController.class)
+                .payOrder(order.getId(),null, null))
+                .withRel(LinkRelations.PAY_REL)
+                .andAffordance(afford(methodOn(PaymentController.class)
+                        .payOrder(order.getId(),null, null)));
+    }
+
+    private Link deliverLink(PurchaseOrder order) {
+        return linkTo(methodOn(OrderController.class)
+                .deliverOrder(order.getId()))
+                .withRel(LinkRelations.DELIVER_REL)
+                .andAffordance(afford(methodOn(OrderController.class)
+                        .deliverOrder(order.getId())));
     }
 }

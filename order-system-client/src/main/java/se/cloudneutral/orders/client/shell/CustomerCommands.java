@@ -22,7 +22,7 @@ public class CustomerCommands {
     }
 
     @Command(name = {"customer", "list"},
-            group = "1. Customer Commands",
+            group = "Customer Commands",
             alias = "cl",
             description = "List customers, discovered from the API root and paged by following 'next' links")
     public String listCustomers(

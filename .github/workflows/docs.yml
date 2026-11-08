@@ -5,9 +5,9 @@ on:
     branches: [main]
     paths:
       - "docs/**"
-      - "order-system-server/src/main/resources/guides/**"
-      - "order-system-server/src/main/resources/rels/**"
-      - "order-system-server/src/main/resources/problems/**"
+      - "order-system-server/src/main/resources/doc/guides/**"
+      - "order-system-server/src/main/resources/doc/rels/**"
+      - "order-system-server/src/main/resources/doc/problems/**"
       - "mkdocs.yml"
       - "prepare-docs.sh"
       - "requirements-docs.txt"

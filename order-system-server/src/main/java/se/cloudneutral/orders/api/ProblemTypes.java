@@ -26,6 +26,8 @@ public abstract class ProblemTypes {
 
     public static final URI ORDER_NOT_CANCELLABLE = of("order-not-cancellable");
 
+    public static final URI INVALID_ORDER_STATE = of("invalid-order-state");
+
     private static URI of(String type) {
         return URI.create(TYPE_URI_TEMPLATE.replace("{type}", type));
     }

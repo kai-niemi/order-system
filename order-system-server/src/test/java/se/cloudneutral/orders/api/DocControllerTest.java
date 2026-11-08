@@ -22,12 +22,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Tag("unit-test")
-class RelControllerTest {
+class DocControllerTest {
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new RelController()).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new DocController()).build();
     }
 
     // Every relation the server emits, as a link or as an embedded collection
@@ -43,11 +43,13 @@ class RelControllerTest {
                 "orderItems",
                 LinkRelations.CUSTOMER_REL,
                 LinkRelations.CUSTOMER_COLL_REL,
-                LinkRelations.CANCEL_REL);
+                LinkRelations.CANCEL_REL,
+                "pay",
+                "deliver");
     }
 
     static Stream<String> guides() {
-        return Stream.of("index", "create-order", "cancel-order");
+        return Stream.of("index", "create-order", "cancel-order", "pay-and-deliver-order");
     }
 
     // Every problem type the server emits, read from the constants so none can go undocumented

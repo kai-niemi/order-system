@@ -8,9 +8,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import se.cloudneutral.orders.domain.Customer;
+import se.cloudneutral.orders.domain.Product;
 import se.cloudneutral.orders.domain.PurchaseOrder;
 import se.cloudneutral.orders.domain.ShipmentStatus;
-import se.cloudneutral.orders.domain.Product;
 
 public interface OrderService {
     Page<Product> findProducts(Pageable pageable);
@@ -34,7 +34,7 @@ public interface OrderService {
     PurchaseOrder placeOrder(PurchaseOrder order);
 
     /**
-     * Cancels an order, provided it is still in {@link ShipmentStatus#placed}.
+     * Cancels an order, provided it is still in {@link ShipmentStatus#PLACED}.
      *
      * @return {@code true} if the order was cancelled, {@code false} if no such order exists or it
      * was no longer cancellable

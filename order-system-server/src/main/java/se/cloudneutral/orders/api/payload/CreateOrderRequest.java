@@ -23,5 +23,5 @@ public record CreateOrderRequest(
         @NotNull UUID customerId,
         // @NotNull as well, since HAL-FORMS only derives required from @NotNull and @NotBlank
         @JsonPropertyDescription("The product lines of the order, at least one.")
-        @NotNull @NotEmpty @Valid List<CreateOrderItemRequest> items) {
+        @NotNull @NotEmpty List<@Valid CreateOrderItemRequest> items) {
 }

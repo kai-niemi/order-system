@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -26,10 +27,11 @@ public final class Representation {
     }
 
     private Representation(JsonNode body, Map<String, String> inheritedCuries) {
-        this.body = body;
+        this.body = body == null ? NullNode.getInstance() : body;
         this.curies = new HashMap<>(inheritedCuries);
-        body.path("_links").path("curies")
-                .forEach(curie -> curies.put(curie.path("name").asString(), curie.path("href").asString()));
+        this.body.path("_links").path("curies")
+                .forEach(curie -> curies.put(curie.path("name").asString(),
+                        curie.path("href").asString()));
     }
 
     public Optional<Link> link(String rel) {
@@ -80,7 +82,11 @@ public final class Representation {
      * @return the properties / state of this representation, without its hypermedia controls
      */
     public JsonNode properties() {
-        ObjectNode state = (ObjectNode) body.deepCopy();
+        if (!(body instanceof ObjectNode objectNode)) {
+            // No content, or a body that isn't a JSON object
+            return body;
+        }
+        ObjectNode state = objectNode.deepCopy();
         state.remove(List.of("_links", "_templates"));
         return state;
     }

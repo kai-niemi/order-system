@@ -30,7 +30,8 @@ public class IdempotencyEvictor {
     @Autowired
     private IdempotencyProperties properties;
 
-    @Scheduled(fixedDelayString = "${app.idempotency.evict-interval:PT10M}")
+    @Scheduled(fixedDelayString = "${app.idempotency.evict-interval:PT10M}",
+            initialDelayString = "${app.idempotency.evict-interval:PT10M}")
     public void evictExpired() {
         int batchSize = properties.evictBatch();
         long total = 0;

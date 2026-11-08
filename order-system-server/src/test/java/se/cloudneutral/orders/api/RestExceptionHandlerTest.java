@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import se.cloudneutral.orders.config.JacksonConfig;
+import se.cloudneutral.orders.domain.InvalidStateTransitionException;
 import se.cloudneutral.orders.service.BusinessException;
 import se.cloudneutral.orders.service.IdempotencyException;
 
@@ -30,7 +31,7 @@ class RestExceptionHandlerTest {
     @RestController
     static class FailingController {
         @PostMapping("/orders")
-        void place(@RequestHeader(OrderController.HEADER_IDEMPOTENCY_KEY) String key) {
+        void place(@RequestHeader(WebConstants.HEADER_IDEMPOTENCY_KEY) String key) {
         }
 
         @PostMapping("/other")
@@ -55,6 +56,16 @@ class RestExceptionHandlerTest {
         @GetMapping("/unknown")
         void unknown() {
             throw NoSuchResourceException.product(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        }
+
+        @GetMapping("/invalid-state")
+        void invalidState() {
+            throw new InvalidStateTransitionException("Only paid orders can be delivered");
+        }
+
+        @GetMapping("/missing")
+        void missing() {
+            throw ResourceNotFoundException.order(UUID.fromString("00000000-0000-0000-0000-000000000000"));
         }
 
         @GetMapping("/not-found")
@@ -120,6 +131,23 @@ class RestExceptionHandlerTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.type").value(ProblemTypes.UNKNOWN_REFERENCE.toString()))
                 .andExpect(jsonPath("$.detail").value("No such product: 00000000-0000-0000-0000-000000000000"));
+    }
+
+    @Test
+    void givenInvalidStateTransition_thenExpectConflictWithTypedProblem() throws Exception {
+        mockMvc.perform(get("/invalid-state"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemTypes.INVALID_ORDER_STATE.toString()))
+                .andExpect(jsonPath("$.title").value("Invalid order state"))
+                .andExpect(jsonPath("$.detail").value("Only paid orders can be delivered"));
+    }
+
+    @Test
+    void givenMissingPathResource_thenExpectNotFoundWithoutType() throws Exception {
+        mockMvc.perform(get("/missing"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").doesNotExist())
+                .andExpect(jsonPath("$.detail").value("No such order: 00000000-0000-0000-0000-000000000000"));
     }
 
     @Test

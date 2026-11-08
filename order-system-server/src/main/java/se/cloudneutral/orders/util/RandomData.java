@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -126,6 +127,19 @@ public class RandomData {
     private static final char[] VOWELS = "aeiou".toCharArray();
 
     private static final char[] CONSONANTS = "bcdfghjklmnpqrstvwxyz".toCharArray();
+
+    public static BigDecimal randomAmount(BigDecimal min, BigDecimal max) {
+        long minCents = min.movePointRight(2).longValueExact();
+        long maxCents = max.movePointRight(2).longValueExact();
+        return BigDecimal.valueOf(
+                ThreadLocalRandom.current().nextLong(minCents, maxCents + 1),
+                2
+        );
+    }
+
+    public static int randomInventory() {
+        return ThreadLocalRandom.current().nextInt(500,750);
+    }
 
     public static String randomSku(int length) {
         return "SKU-" + UUID.randomUUID()

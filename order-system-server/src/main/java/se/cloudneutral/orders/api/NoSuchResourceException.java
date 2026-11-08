@@ -7,12 +7,20 @@ import java.util.UUID;
  * itself is well-formed, hence this maps to 422 rather than 400 or 404.
  */
 public class NoSuchResourceException extends RuntimeException {
+    public static NoSuchResourceException order(UUID id) {
+        return new NoSuchResourceException("No such order: %s".formatted(id));
+    }
+
     public static NoSuchResourceException customer(UUID id) {
         return new NoSuchResourceException("No such customer: %s".formatted(id));
     }
 
     public static NoSuchResourceException product(UUID id) {
         return new NoSuchResourceException("No such product: %s".formatted(id));
+    }
+
+    public static NoSuchResourceException payment(UUID id) {
+        return new NoSuchResourceException("No such payment attempt: %s".formatted(id));
     }
 
     public NoSuchResourceException(String message) {

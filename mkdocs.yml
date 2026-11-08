@@ -34,6 +34,7 @@ nav:
       - Introduction: guides/index.md
       - Create Order: guides/create-order.md
       - Cancel Order: guides/cancel-order.md
+      - Pay and Deliver Order: guides/pay-and-deliver-order.md
   - Link Relations:
       - Orders: rels/orders.md
       - Order: rels/order.md
@@ -45,6 +46,8 @@ nav:
       - Customers: rels/customers.md
       - Customer: rels/customer.md
       - Cancel: rels/cancel.md
+      - Pay: rels/pay.md
+      - Deliver: rels/deliver.md
       - Actuators: rels/actuators.md
   - Problems:
       - Idempotency Key Required: problems/idempotency-key-required.md
@@ -53,4 +56,5 @@ nav:
       - Unknown Reference: problems/unknown-reference.md
       - Order Rejected: problems/order-rejected.md
       - Order Not Cancellable: problems/order-not-cancellable.md
+      - Invalid Order State: problems/invalid-order-state.md
   - Profiles: profiles.md

@@ -1,6 +1,7 @@
 package se.cloudneutral.orders.api;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
@@ -20,8 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code /guides}, linked from the API root as {@code help}.
  */
 @RestController
-public class RelController {
+public class DocController {
     public static final String TEXT_MARKDOWN_VALUE = "text/markdown;charset=UTF-8";
+
+    // Classpath location of the rels, problems and guides directories
+    private static final String DOCUMENTATION_ROOT = "doc";
 
     // Relation names are case-sensitive, e.g. orderItems, but never contain dots or slashes
     private static final Pattern DOCUMENT_NAME = Pattern.compile("[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*");
@@ -31,36 +35,36 @@ public class RelController {
     private final HtmlRenderer renderer = HtmlRenderer.builder().build();
 
     @GetMapping(value = "/rels/{rel}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> relation(@PathVariable String rel) throws IOException {
+    public ResponseEntity<String> relation(@PathVariable String rel) {
         return html("rels", rel);
     }
 
     @GetMapping(value = "/rels/{rel}", produces = TEXT_MARKDOWN_VALUE)
-    public ResponseEntity<String> relationMarkdown(@PathVariable String rel) throws IOException {
+    public ResponseEntity<String> relationMarkdown(@PathVariable String rel) {
         return markdown("rels", rel);
     }
 
     @GetMapping(value = "/problems/{type}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> problemType(@PathVariable String type) throws IOException {
+    public ResponseEntity<String> problemType(@PathVariable String type) {
         return html("problems", type);
     }
 
     @GetMapping(value = "/problems/{type}", produces = TEXT_MARKDOWN_VALUE)
-    public ResponseEntity<String> problemTypeMarkdown(@PathVariable String type) throws IOException {
+    public ResponseEntity<String> problemTypeMarkdown(@PathVariable String type) {
         return markdown("problems", type);
     }
 
     @GetMapping(value = "/guides/{guide}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> guide(@PathVariable String guide) throws IOException {
+    public ResponseEntity<String> guide(@PathVariable String guide) {
         return html("guides", guide);
     }
 
     @GetMapping(value = "/guides/{guide}", produces = TEXT_MARKDOWN_VALUE)
-    public ResponseEntity<String> guideMarkdown(@PathVariable String guide) throws IOException {
+    public ResponseEntity<String> guideMarkdown(@PathVariable String guide) {
         return markdown("guides", guide);
     }
 
-    private ResponseEntity<String> html(String directory, String name) throws IOException {
+    private ResponseEntity<String> html(String directory, String name) {
         String markdown = read(directory, name);
         if (markdown == null) {
             return ResponseEntity.notFound().build();
@@ -70,7 +74,7 @@ public class RelController {
                 .body(renderer.render(parser.parse(markdown)));
     }
 
-    private ResponseEntity<String> markdown(String directory, String name) throws IOException {
+    private ResponseEntity<String> markdown(String directory, String name) {
         String markdown = read(directory, name);
         if (markdown == null) {
             return ResponseEntity.notFound().build();
@@ -80,16 +84,20 @@ public class RelController {
                 .body(markdown);
     }
 
-    private String read(String directory, String name) throws IOException {
+    private String read(String directory, String name) {
         if (!DOCUMENT_NAME.matcher(name).matches()) {
             return null;
         }
 
-        ClassPathResource resource = new ClassPathResource(directory + "/" + name + ".md");
+        ClassPathResource resource = new ClassPathResource(DOCUMENTATION_ROOT + "/" + directory + "/" + name + ".md");
         if (!resource.exists() || !resource.isReadable()) {
             return null;
         }
 
-        return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

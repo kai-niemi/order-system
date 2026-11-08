@@ -43,7 +43,7 @@ public class PurchaseOrder extends AbstractEntity<UUID> {
     // comparison - see the preStatus guard of the updateOrderStatusById named query.
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", length = 25, nullable = false)
-    private ShipmentStatus status = ShipmentStatus.placed;
+    private ShipmentStatus status = ShipmentStatus.PLACED;
 
     @Basic(fetch = FetchType.LAZY)
     @Column(nullable = false, updatable = false, name = "date_placed")
@@ -129,6 +129,36 @@ public class PurchaseOrder extends AbstractEntity<UUID> {
             subTotal = subTotal.add(oi.totalCost());
         }
         return subTotal;
+    }
+
+    public void paymentSucceeded() {
+        if (status != ShipmentStatus.PAYMENT_PENDING) {
+            throw new InvalidStateTransitionException(
+                    "Order is not awaiting payment"
+            );
+        }
+
+        status = ShipmentStatus.PAID;
+    }
+
+    public void paymentDeclined() {
+        if (status != ShipmentStatus.PAYMENT_PENDING) {
+            throw new InvalidStateTransitionException(
+                    "Order is not awaiting payment"
+            );
+        }
+
+        status = ShipmentStatus.PLACED;
+    }
+
+    public void deliver() {
+        if (status != ShipmentStatus.PAID) {
+            throw new InvalidStateTransitionException(
+                    "Only paid orders can be delivered"
+            );
+        }
+
+        status = ShipmentStatus.DELIVERED;
     }
 
     @Override
