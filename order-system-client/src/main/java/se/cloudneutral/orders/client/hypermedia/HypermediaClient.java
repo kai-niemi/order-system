@@ -1,7 +1,6 @@
 package se.cloudneutral.orders.client.hypermedia;
 
 import java.net.URI;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -63,7 +62,11 @@ public class HypermediaClient {
      * Follow a link relation that may or may not be advertised, such as {@code next} on the last page.
      */
     public Optional<Representation> followIfPresent(Representation from, String rel) {
-        return from.link(rel).map(link -> get(link.toUri()));
+        return from.link(rel).map(this::get);
+    }
+
+    public Representation get(Link link) {
+        return get(link.toUri());
     }
 
     public Representation get(URI uri) {
@@ -84,14 +87,17 @@ public class HypermediaClient {
     /**
      * Submit a HAL-FORMS template, using the method, target and content type it advertises.
      *
-     * @param body the request body, or null for templates without properties
+     * @param submission the submission
      */
-    public Response submit(Template template, JsonNode body, Map<String, String> headers) {
+    public Response submit(Submission submission) {
+        Template template = submission.template();
+        JsonNode body = submission.body();
         URI target = URI.create(template.target());
+
         return exchange(target, () -> {
             RestClient.RequestBodySpec request = restClient.method(HttpMethod.valueOf(template.method()))
                     .uri(target)
-                    .headers(h -> headers.forEach(h::set));
+                    .headers(h -> submission.headers().forEach(h::set));
             if (body != null) {
                 request.contentType(MediaType.parseMediaType(template.contentType()))
                         .body(body);

@@ -37,11 +37,13 @@ public class ServerApplication {
         pw.printf("Options include:%n");
         pw.printf("--help                    this help%n");
         pw.printf("--profiles [profile,..]   override spring profiles to activate%n");
+        pw.printf("--drop-test-data          drop and rebuild test data%n");
         pw.printf("@<file>                   read shell commands from file (non-interactive)%n");
         pw.println();
 
         message.accept(pw);
 
+        pw.flush();
         pw.println();
 
         System.exit(0);

@@ -7,12 +7,14 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TestDataRunner implements ApplicationRunner {
+    public static final String DROP_TEST_DATA = "drop-test-data";
+
     @Autowired
     private TestDataService testDataService;
 
     @Override
     public void run(ApplicationArguments args) {
-        if (args.containsOption("drop-test-data")) {
+        if (args.containsOption(DROP_TEST_DATA)) {
             testDataService.deleteAllData();
         }
 

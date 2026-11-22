@@ -190,12 +190,12 @@ public class ApiErrorMappingTest extends AbstractDatabaseTest {
         forceStatus(orderId, "PAID");
 
         mockMvc.perform(post("/api/orders/{id}/delivery", orderId))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
         assertThat(orderStatus(orderId)).isEqualTo("DELIVERED");
 
         // A retry after a lost response is a no-op rather than an error
         mockMvc.perform(post("/api/orders/{id}/delivery", orderId))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
         assertThat(orderStatus(orderId)).isEqualTo("DELIVERED");
     }
 

@@ -44,10 +44,10 @@ import se.cloudneutral.orders.domain.Customer;
 import se.cloudneutral.orders.domain.PurchaseOrder;
 import se.cloudneutral.orders.domain.PurchaseOrderItem;
 import se.cloudneutral.orders.domain.ShipmentStatus;
-import se.cloudneutral.orders.service.delivery.DeliveryService;
 import se.cloudneutral.orders.service.IdempotencyRequest;
 import se.cloudneutral.orders.service.IdempotencyResult;
 import se.cloudneutral.orders.service.IdempotencyService;
+import se.cloudneutral.orders.service.delivery.DeliveryService;
 import se.cloudneutral.orders.service.order.OrderService;
 import se.cloudneutral.orders.util.AssertUtils;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
@@ -89,8 +89,9 @@ public class OrderController {
         List<CreateOrderItemRequest> itemRequests = new ArrayList<>();
 
         orderService.findRandomProducts(products).forEach(
-                product -> itemRequests.add(new CreateOrderItemRequest(product.getId(),
-                        product.getInventory())));
+                product -> itemRequests.add(
+                        new CreateOrderItemRequest(product.getId(), Math.min(1, product.getInventory()))
+                ));
 
         if (itemRequests.isEmpty()) {
             throw new ResponseStatusException(NOT_FOUND, "No products found");
@@ -212,12 +213,12 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/delivery")
-    public ResponseEntity<Void> deliverOrder(@PathVariable("id") UUID id) {
+    public OrderModel deliverOrder(@PathVariable("id") UUID id) {
         AssertUtils.assertNoTransaction();
 
         deliveryService.deliver(id);
 
-        return ResponseEntity.noContent().build();
+        return findOrderModel(id);
     }
 
     // placeOrder returns line items holding placeholder products carrying only id and sku,

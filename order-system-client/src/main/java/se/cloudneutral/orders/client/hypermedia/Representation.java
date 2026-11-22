@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.NullNode;
@@ -81,6 +82,12 @@ public final class Representation {
     /**
      * @return the properties / state of this representation, without its hypermedia controls
      */
+    public JsonNode properties(Consumer<JsonNode> consumer) {
+        ObjectNode body = (ObjectNode) properties().deepCopy();
+        consumer.accept(body);
+        return body;
+    }
+
     public JsonNode properties() {
         if (!(body instanceof ObjectNode objectNode)) {
             // No content, or a body that isn't a JSON object

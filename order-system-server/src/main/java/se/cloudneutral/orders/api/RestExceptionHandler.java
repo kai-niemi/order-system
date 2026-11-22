@@ -71,9 +71,15 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(NoSuchResourceException.class)
-    public ProblemDetail handleNoSuchResource(NoSuchResourceException ex) {
+    public ProblemDetail handleNoSuchResourceException(NoSuchResourceException ex) {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT,
                 ProblemTypes.UNKNOWN_REFERENCE, "Unknown resource reference", ex.getMessage());
+    }
+
+    @ExceptionHandler(OutOfStockException.class)
+    public ProblemDetail handleOutOfStockException(OutOfStockException ex) {
+        return problem(HttpStatus.CONFLICT,
+                ProblemTypes.ORDER_REJECTED, "Order rejected due to insufficient inventory", ex.getMessage());
     }
 
     /**

@@ -6,12 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import se.cloudneutral.orders.annotation.TransactionMandatory;
-import se.cloudneutral.orders.domain.Customer;
-import se.cloudneutral.orders.service.order.OrderService;
-import se.cloudneutral.orders.domain.PurchaseOrder;
-import se.cloudneutral.orders.domain.Product;
-import se.cloudneutral.orders.util.AssertUtils;
 import se.cloudneutral.orders.api.payload.CreateOrderRequest;
+import se.cloudneutral.orders.domain.Customer;
+import se.cloudneutral.orders.domain.Product;
+import se.cloudneutral.orders.domain.PurchaseOrder;
+import se.cloudneutral.orders.service.order.OrderService;
+import se.cloudneutral.orders.util.AssertUtils;
 
 @Service
 public class CreateOrderFacade {
@@ -32,6 +32,10 @@ public class CreateOrderFacade {
         request.items().forEach(item -> {
             Product product = orderService.findProductById(item.productId())
                     .orElseThrow(() -> NoSuchResourceException.product(item.productId()));
+
+            if (product.getInventory() - item.quantity() < 0) {
+                throw OutOfStockException.product(product.getId(), product.getInventory(), item.quantity());
+            }
 
             builder.andOrderItem()
                     .withProductId(product.getId())
