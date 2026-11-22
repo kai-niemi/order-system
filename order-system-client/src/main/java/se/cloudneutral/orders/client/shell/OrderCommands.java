@@ -78,13 +78,16 @@ public class OrderCommands {
                     description = "Resend the previous submission. Replays it under the same key, "
                                   + "unless --key is given, which submits the same body under that key") boolean resend,
             @Option(longName = "key", shortName = 'k',
-                    description = "Idempotency key. Random if omitted, or the previous key with --repeat") String key) {
+                    description = "Idempotency key. Random if omitted, or the previous key with --resend") String key) {
 
-        final boolean repeating = resend && lastSubmission != null;
+        if (resend && lastSubmission == null) {
+            throw new IllegalArgumentException("No previous order submission to resend");
+        }
+
         final String idempotencyKey;
         if (key != null) {
             idempotencyKey = key;
-        } else if (repeating) {
+        } else if (resend) {
             idempotencyKey = lastSubmission.headers().get(HEADER_IDEMPOTENCY_KEY);
         } else {
             idempotencyKey = UUID.randomUUID().toString();
@@ -92,7 +95,7 @@ public class OrderCommands {
 
         final Response response;
 
-        if (repeating) {
+        if (resend) {
             lastSubmission = Submission.of(
                     lastSubmission.template(),
                     lastSubmission.body(),
@@ -116,8 +119,9 @@ public class OrderCommands {
                             "Order form has no template for %s".formatted(orderLink.href())));
 
             JsonNode modifiedForm = form.properties(jsonNode -> {
-                ((ObjectNode) jsonNode.at("/items/0"))
-                        .put("quantity", quantity);
+                for (JsonNode item : jsonNode.path("items")) {
+                    ((ObjectNode) item).put("quantity", quantity);
+                }
             });
 
             lastSubmission = Submission.of(
@@ -157,7 +161,7 @@ public class OrderCommands {
             group = ORDER_COMMANDS,
             description = "Pay an order through its 'pay' HAL-FORMS affordance, offered only while it can be paid")
     public String payOrder(@Argument(index = 0,
-                                   description = "URI of the order, as printed by 'order create'. Defaults to the last order placed in this session") String orderUri,
+                                   description = "URI of the order, as printed by 'order place'. Defaults to the last order placed in this session") String orderUri,
                            @Option(longName = "key", shortName = 'k',
                                    description = "Idempotency key, random if omitted") String key,
                            @Option(longName = "timeout", defaultValue = "false",
@@ -200,8 +204,8 @@ public class OrderCommands {
     @Command(name = {"order", "deliver"},
             alias = "od",
             group = ORDER_COMMANDS,
-            description = "Deliver an order through its 'deliver' HAL-FORMS affordance, offered only after its paid")
-    public String deliverOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order create'. "
+            description = "Deliver an order through its 'deliver' HAL-FORMS affordance, offered only after it's paid")
+    public String deliverOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order place'. "
                                                                   + "Defaults to the last order placed in this session")
                                String orderUri) {
         URI uri = resolveOrderURI(orderUri);
@@ -230,14 +234,17 @@ public class OrderCommands {
         return String.join(System.lineSeparator(),
                 "%s %s".formatted(response.status(), uri),
                 "Status: %s".formatted(delivery.get("status").asString()),
-                " Order: %s".formatted(delivery.link(OrderSystemRels.SELF).isPresent()));
+                "Order: %s".formatted(
+                        delivery.link(OrderSystemRels.SELF)
+                                .map(Link::href)
+                                .orElse("not advertised")));
     }
 
     @Command(name = {"order", "cancel"},
             alias = "ox",
             group = ORDER_COMMANDS,
             description = "Cancel an order through its 'cancel' HAL-FORMS affordance, offered only while it can be cancelled")
-    public String cancelOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order create'. "
+    public String cancelOrder(@Argument(index = 0, description = "URI of the order, as printed by 'order place'. "
                                                                  + "Defaults to the last order placed in this session")
                               String orderUri) {
         URI uri = resolveOrderURI(orderUri);
