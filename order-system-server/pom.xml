@@ -15,6 +15,7 @@
 
     <properties>
         <victools.version>5.0.0</victools.version>
+        <flyway.version>13.12.2</flyway.version>
     </properties>
 
     <dependencies>
@@ -87,7 +88,7 @@
         <dependency>
             <groupId>org.commonmark</groupId>
             <artifactId>commonmark</artifactId>
-            <version>0.30.0</version>
+            <version>0.32.0</version>
         </dependency>
 
         <dependency>
@@ -103,7 +104,7 @@
         <dependency>
             <groupId>net.ttddyy</groupId>
             <artifactId>datasource-proxy</artifactId>
-            <version>1.11.0</version>
+            <version>1.11.1</version>
         </dependency>
 
         <dependency>
